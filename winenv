@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+# load base config
+ENV_VARS=$(grep -v '^#' .env) 
+export $(echo $ENV_VARS | xargs)
+
+APPID=$1 
+shift
+
+# STEAM_COMPAT_DATA_PATH
+IFS=';' read -ra a <<< "$(steamtinkerlaunch getcompatdata $APPID)"
+export STEAM_COMPAT_DATA_PATH="${a[1]}"
+
+# WINEDLLPATH ??
+export WINEPREFIX="$STEAM_COMPAT_DATA_PATH/pfx"
+
+#  Compat tool 
+export COMPAT_TOOL_VERSION=$(cat $STEAM_COMPAT_DATA_PATH/version)
+export COMPAT_TOOL="$STEAM_COMPATTOOLS/$COMPAT_TOOL_VERSION"
+export PROTON="$COMPAT_TOOL/proton"
+
+# export WINE="$STEAM_PROTON50/dist/bin/wine" # Proton 
+export WINE=$COMPAT_TOOL/files/bin/wine       # GE-Proton
+
+# build env/source
+cat ~/.bashrc > .winenv
+echo "export APPID=$APPID" >> .winenv
+echo "export WINEPREFIX="$WINEPREFIX"" >> .winenv
+echo "export WINE="$WINE"" >> .winenv
+echo "export PROTON="$PROTON"" >> .winenv
+echo "export STEAM_COMPAT_DATA_PATH="$STEAM_COMPAT_DATA_PATH"" >> .winenv
+echo "export STEAM_COMPAT_CLIENT_INSTALL_PATH="$STEAM_COMPAT_CLIENT_INSTALL_PATH"" >> .winenv
+echo "export STEAM_APPS_COMMON=$STEAM_APPS_COMMON" >> .winenv
+echo "alias wine=\"$WINE\";" >> .winenv
+echo "export PATH=\"$COMPAT_TOOL:$COMPAT_TOOL/files/bin:$PATH\"" >> .winenv
+
+cmd="source .winenv && $@"
+echo "cmd='$cmd'"
+bash -c "$cmd"
+
+ 
