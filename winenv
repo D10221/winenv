@@ -7,7 +7,7 @@
 
 # this
 fname=$(basename $0)
-version=0.0.1-alpha-2
+version=0.0.1-alpha-3
 cwd="$(
     cd -- "$(dirname "$0")" >/dev/null 2>&1
     pwd -P
@@ -54,14 +54,25 @@ ${fname^^}_CONFIG=\$HOME/.config/$fname/.$fname
 fi
 
 # extra
+install_target="$HOME/.local/bin/$fname"
 case "${1}" in
 install)
-    echo "$1 Not implemented" >&2
-    exit 1
+    if [ -f $install_target ]; then
+        echo "$fname is already installed">&2
+        exit 1
+    fi
+    cp "$fpath" $install_target
+    exit
     ;;
 uninstall)
-    echo "$1 Not implemented" >&2
-    exit 1
+    if [ ! -f $install_target ]; then
+        echo "$fname is not installed">&2
+        exit 1
+    fi
+    rm "$HOME/.local/bin/$fname" -rf
+    rm "${fname^^}_CONFIG" -rf
+    echo "get it from $url"
+    exit
     ;;
 update)    
     echo "$1 Not implemented" >&2
