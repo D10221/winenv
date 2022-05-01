@@ -13,7 +13,8 @@ cwd="$(
     pwd -P
 )"
 fpath="$cwd/$fname"
-url="https://github.com/D10221/winev"
+url="https://github.com/D10221/$fname"
+fetch="https://raw.githubusercontent.com/D10221/$fname/main/$fname"
 desc='Sets env vars and paths to help run an arbitrary command on steam wine/proton app prefixes'
 
 # usage
@@ -74,9 +75,9 @@ uninstall)
     echo "get it from $url"
     exit
     ;;
-update)    
-    echo "$1 Not implemented" >&2
-    exit 1
+update)      
+    curl "$fetch" > "$fpath"
+    exit
     ;;
 esac
 
