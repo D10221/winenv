@@ -1,6 +1,35 @@
 # winenv
 
-Sets env vars and paths to run an arbitrary command on steam wine/proton app prefixes
+Sets env vars and paths to help run an arbitrary command on steam wine/proton app prefixes
+
+# usage  
+
+```
+winenv <APPID> '<shell-command>'
+```
+Or 
+
+```bash
+winenv install   # TODO: copy it self to "$HOME/.local/bin/"
+winenv uninstall # TODO: remove it self from "$HOME/.local/bin/"
+winenv update    # TODO: replace it self with new version"
+```
+
+# Config
+Defaults to 
+```
+# steam
+STEAM_HOME=HOME/.local/share/Steam
+STEAM_APPS=$STEAM_HOME/steamapps
+STEAM_APPS_COMMON=$STEAM_APPS/common
+# steam compat
+STEAM_COMPAT_CLIENT_INSTALL_PATH=STEAM_HOME
+STEAM_COMPATTOOLS=$STEAM_HOME/compatibilitytools.d
+```
+Reads from:  
+```$PWD\.winenv```  
+```$HOME\.config\winenv\.winenv```  
+In That order
 
 ## Ex:
 
