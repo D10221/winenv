@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# 
-# Sets env vars and paths 
-# to help run an arbitrary command 
+#
+# Sets env vars and paths
+# to help run an arbitrary command
 # on steam wine/proton app prefixes
-# 
+#
 
 # meta
 fname=$(basename $0)
-version=0.0.4
+version=0.0.5
 cwd="$(
     cd -- "$(dirname "$0")" >/dev/null 2>&1
     pwd -P
@@ -19,21 +19,21 @@ desc='Sets env vars and paths to help run an arbitrary command on steam wine/pro
 
 # usage
 if [ -z "$1" ]; then
-    echo "${fname}: v${version} ${url}"     
-    echo 
+    echo "${fname}: v${version} ${url}"
+    echo
     echo "'$desc'"
-    echo 
+    echo
     echo "Usage: "
     echo "\$ $fname # with no arg, shows this"
     echo "\$ $fname <APPID>' # show env for <APPID>"
-    echo "\$ $fname <APPID> <COMMAND>' # run <command> with <APPID>'s env" 
+    echo "\$ $fname <APPID> <COMMAND>' # run <command> with <APPID>'s env"
     echo "\$ $fname <install|uninstall|update>' # Not implemented"
     exit
 fi
 
 # config
 cfg_global="$HOME/.config/$fname/.$fname" # "~/.config/winenv/.winenv"
-cfg_cwd="$PWD/.$fname" # "./.winenv"
+cfg_cwd="$PWD/.$fname"                    # "./.winenv"
 if [ -f "$cfg_cwd" ]; then
     source "$cfg_cwd"
 elif [ -f "$cfg_global" ]; then
@@ -56,22 +56,25 @@ fi
 
 # self update
 function get_version {
-   IFS='=';read -ra values <<<"$1"
-   echo "${values[1]}"
+    IFS='='
+    read -ra values <<<"$1"
+    echo "${values[1]}"
 }
 install_target="$HOME/.local/bin/$fname"
 case "${1}" in
 install)
+    # install into user/bin
     if [ -f $install_target ]; then
-        echo "$fname is already installed">&2
+        echo "$fname is already installed" >&2
         exit 1
     fi
     cp "$fpath" $install_target
     exit
     ;;
 uninstall)
+    # remove from user system
     if [ ! -f $install_target ]; then
-        echo "$fname is not installed">&2
+        echo "$fname is not installed" >&2
         exit 1
     fi
     rm "$HOME/.local/bin/$fname" -rf
@@ -79,26 +82,24 @@ uninstall)
     echo "get it from $url"
     exit
     ;;
-update)        
+update)
+    # download new version
     tmp=$(mktemp)
-    curl $fetch > $tmp    
+    curl $fetch >$tmp
     new_version="$(get_version "$(grep "version=" $tmp)")"
     if [ -z "$new_version" ]; then
-        echo "see file: '$tmp' version ($new_version) is not valid or not foud"
+        echo "error: can't udpate, see file: '$tmp' version ($new_version) is not valid or not foud"
         exit 1
     elif [[ "$version" > "$new_version" ]]; then
-        echo "see file: '$tmp' version ($new_version) is mayor than this version ($version)"    
+        echo "error: can't udpate, see file: '$tmp' version ($new_version) is mayor than this version ($version)"
         exit 1
     elif [[ "$new_version" == "$version" ]]; then
-        echo "see file: '$tmp' version ($new_version) equals this ($version)"    
-        exit 1
+        echo "error: can't udpate, see file: '$tmp' version ($new_version) equals this ($version)"        
         exit 1
     elif [[ "$new_version" > "$version" ]]; then
-        bak="$fpath.$version.bak"
-        cp "$fpath" "$bak"
-        cat "$tmp" >"$fpath"
-        echo "Updated: see backup at $bak"
-        exit 0
+        bakd="$HOME/.local/share/$fname"
+        bak="$bakd/$fname.$version.bak"
+        mkdir -p "$bakd" && cp "$fpath" "$bak" && cat "$tmp" >"$fpath" && echo "Updated: see backup at $bak" && exit 0 || echo "error updating" && exit 1
     fi
     exit
     ;;
@@ -121,7 +122,7 @@ fi
 # STEAM_COMPAT_DATA_PATH
 IFS=';' read -ra a <<<"$(steamtinkerlaunch getcompatdata $APPID)"
 STEAM_COMPAT_DATA_PATH="${a[1]}"
-if [ ! -d "$STEAM_COMPAT_DATA_PATH" ]; then    
+if [ ! -d "$STEAM_COMPAT_DATA_PATH" ]; then
     echo "STEAM_COMPAT_DATA_PATH='$STEAM_COMPAT_DATA_PATH' doesn't exists" >&2
     exit 1
 fi
@@ -141,19 +142,19 @@ if [ -z "$COMPAT_TOOL_VERSION" ]; then
 fi
 # Compat tool path
 COMPAT_TOOL_PATH="$STEAM_COMPATTOOLS/$COMPAT_TOOL_VERSION"
-if [ ! -d "$COMPAT_TOOL_PATH" ]; then    
+if [ ! -d "$COMPAT_TOOL_PATH" ]; then
     echo "Can't find COMPAT_TOOL_PATH='$COMPAT_TOOL_PATH'" >&2
     exit 1
 fi
 # proton
 PROTON="$COMPAT_TOOL_PATH/proton"
-if [ ! -f "$PROTON" ]; then   
+if [ ! -f "$PROTON" ]; then
     echo "Can't find PROTON='$PROTON'" >&2
     exit 1
 fi
 # wine
 WINE=$COMPAT_TOOL_PATH/files/bin/wine # GE-Proton
-if [ ! -f "$WINE" ]; then    
+if [ ! -f "$WINE" ]; then
     echo "Can't find WINE='$WINE'" >&2
     exit 1
 fi
@@ -170,14 +171,14 @@ x+="export PATH=$COMPAT_TOOL_PATH:$COMPAT_TOOL_PATH/files/bin:$PATH"
 
 # show env in no args left
 if [ -z "$1" ]; then
-IFS='&&';read -ra a1 <<< $x
-for i in "${a1[@]}"
-do
-if [ ! -z "$i" ]; then
-echo $i
-fi
-done
-exit
+    IFS='&&'
+    read -ra a1 <<<$x
+    for i in "${a1[@]}"; do
+        if [ ! -z "$i" ]; then
+            echo $i
+        fi
+    done
+    exit
 fi
 
 # run
