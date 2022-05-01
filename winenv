@@ -5,9 +5,9 @@
 # on steam wine/proton app prefixes
 # 
 
-# this
+# meta
 fname=$(basename $0)
-version=0.0.1-alpha-4
+version=0.0.4
 cwd="$(
     cd -- "$(dirname "$0")" >/dev/null 2>&1
     pwd -P
@@ -54,7 +54,11 @@ ${fname^^}_CONFIG=\$HOME/.config/$fname/.$fname
     source "$cfg_global"
 fi
 
-# extra
+# self update
+function get_version {
+   IFS='=';read -ra values <<<"$1"
+   echo "${values[1]}"
+}
 install_target="$HOME/.local/bin/$fname"
 case "${1}" in
 install)
@@ -75,8 +79,28 @@ uninstall)
     echo "get it from $url"
     exit
     ;;
-update)      
-    curl "$fetch" > "$fpath"
+update)        
+    # tmp=$(mktemp)
+    # curl $fetch > $tmp    
+    tmp="/tmp/tmp.EZIaG85Kok"
+    new_version="$(get_version "$(grep "version=" $tmp)")"
+    if [ -z "$new_version" ]; then
+        echo "see file: '$tmp' version ($new_version) is not valid or not foud"
+        exit 1
+    elif [[ "$version" > "$new_version" ]]; then
+        echo "see file: '$tmp' version ($new_version) is mayor than this version ($version)"    
+        exit 1
+    elif [[ "$new_version" == "$version" ]]; then
+        echo "see file: '$tmp' version ($new_version) equals this ($version)"    
+        exit 1
+        exit 1
+    elif [[ "$new_version" > "$version" ]]; then
+        bak="$fpath.$version.bak"
+        cp "$fpath" "$bak"
+        cat "$tmp" >"$fpath"
+        echo "Updated: see backup at $bak"
+        exit 0
+    fi
     exit
     ;;
 esac
