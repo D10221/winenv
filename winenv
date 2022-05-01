@@ -5,20 +5,29 @@
 # on steam wine/proton app prefixes
 # 
 
-# fpath
+# this
 fname=$(basename $0)
-version=0.0.1-alpha-1
+version=0.0.1-alpha-2
 cwd="$(
     cd -- "$(dirname "$0")" >/dev/null 2>&1
     pwd -P
 )"
 fpath="$cwd/$fname"
+url="https://github.com/D10221/winev"
+desc='Sets env vars and paths to help run an arbitrary command on steam wine/proton app prefixes'
 
 # usage
 if [ -z "$1" ]; then
-    echo "Usage: '$fname <APPID> <COMMAND>'" >&2
-    echo "Usage: '$fname <install|uninstall|update>'" >&2
-    exit 1
+    echo "${fname}: v${version} ${url}"     
+    echo 
+    echo "'$desc'"
+    echo 
+    echo "Usage: "
+    echo "\$ $fname # with no arg, shows this"
+    echo "\$ $fname <APPID>' # show env for <APPID>"
+    echo "\$ $fname <APPID> <COMMAND>' # run <command> with <APPID>'s env" 
+    echo "\$ $fname <install|uninstall|update>' # Not implemented"
+    exit
 fi
 
 # config
@@ -38,7 +47,7 @@ STEAM_APPS_COMMON=\$STEAM_APPS/common
 # steam compat
 STEAM_COMPAT_CLIENT_INSTALL_PATH=\$STEAM_HOME
 STEAM_COMPATTOOLS=\$STEAM_HOME/compatibilitytools.d
-# $fname
+# '$fname'
 ${fname^^}_CONFIG=\$HOME/.config/$fname/.$fname
 " >>"$cfg_global"
     source "$cfg_global"
@@ -73,71 +82,69 @@ if ! [[ $APPID =~ $re ]]; then
     fi
     APPID=$id
 fi
-echo APPID=$APPID
 
 # STEAM_COMPAT_DATA_PATH
 IFS=';' read -ra a <<<"$(steamtinkerlaunch getcompatdata $APPID)"
-export STEAM_COMPAT_DATA_PATH="${a[1]}"
-if [ -z "$STEAM_COMPAT_DATA_PATH" ]; then
-    echo "Can't find STEAM_COMPAT_DATA_PATH='$STEAM_COMPAT_DATA_PATH' for APPID=$APPID" >&2
-    exit 1
-fi
-if [ -d "$STEAM_COMPAT_DATA_PATH" ]; then
-    echo STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH
-else
+STEAM_COMPAT_DATA_PATH="${a[1]}"
+if [ ! -d "$STEAM_COMPAT_DATA_PATH" ]; then    
     echo "STEAM_COMPAT_DATA_PATH='$STEAM_COMPAT_DATA_PATH' doesn't exists" >&2
     exit 1
 fi
 
 #  wine prefix
-export WINEPREFIX="$STEAM_COMPAT_DATA_PATH/pfx"
-if [ -d "$WINEPREFIX" ]; then
-    echo WINEPREFIX=$WINEPREFIX
-else
+WINEPREFIX="$STEAM_COMPAT_DATA_PATH/pfx"
+if [ ! -d "$WINEPREFIX" ]; then
     echo "WINEPREFIX=$WINEPREFIX doesn't exists"
     exit 1
 fi
 
 #  Compat tool Version
-export COMPAT_TOOL_VERSION=$(cat $STEAM_COMPAT_DATA_PATH/version)
+COMPAT_TOOL_VERSION=$(cat $STEAM_COMPAT_DATA_PATH/version)
 if [ -z "$COMPAT_TOOL_VERSION" ]; then
     echo "Can't find COMPAT_TOOL_VERSION for APPID=$APPID with STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH" >&2
     exit 1
 fi
 # Compat tool path
-export COMPAT_TOOL_PATH="$STEAM_COMPATTOOLS/$COMPAT_TOOL_VERSION"
-if [ -d "$COMPAT_TOOL_PATH" ]; then
-    echo "COMPAT_TOOL_PATH=$COMPAT_TOOL_PATH"
-else
+COMPAT_TOOL_PATH="$STEAM_COMPATTOOLS/$COMPAT_TOOL_VERSION"
+if [ ! -d "$COMPAT_TOOL_PATH" ]; then    
     echo "Can't find COMPAT_TOOL_PATH='$COMPAT_TOOL_PATH'" >&2
     exit 1
 fi
 # proton
-export PROTON="$COMPAT_TOOL_PATH/proton"
-if [ -f "$PROTON" ]; then
-    echo PROTON=$PROTON
-else
+PROTON="$COMPAT_TOOL_PATH/proton"
+if [ ! -f "$PROTON" ]; then   
     echo "Can't find PROTON='$PROTON'" >&2
     exit 1
 fi
 # wine
-export WINE=$COMPAT_TOOL_PATH/files/bin/wine # GE-Proton
-if [ -f "$WINE" ]; then
-    echo WINE=$WINE 
-else
+WINE=$COMPAT_TOOL_PATH/files/bin/wine # GE-Proton
+if [ ! -f "$WINE" ]; then    
     echo "Can't find WINE='$WINE'" >&2
     exit 1
 fi
 
 # exports
-x="export APPID=$APPID"
-x+=" export WINEPREFIX=$WINEPREFIX"
-x+=" export WINE=$WINE"
-x+=" export PROTON=$PROTON"
-x+=" export STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH"
-x+=" export STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_CLIENT_INSTALL_PATH"
-x+=" export STEAM_APPS_COMMON=$STEAM_APPS_COMMON"
-x+=" export PATH=$COMPAT_TOOL_PATH:$COMPAT_TOOL_PATH/files/bin:$PATH"
+x="export APPID=$APPID &&"
+x+="export WINEPREFIX=$WINEPREFIX &&"
+x+="export WINE=$WINE &&"
+x+="export PROTON=$PROTON &&"
+x+="export STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH &&"
+x+="export STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_CLIENT_INSTALL_PATH &&"
+x+="export STEAM_APPS_COMMON=$STEAM_APPS_COMMON &&"
+x+="export PATH=$COMPAT_TOOL_PATH:$COMPAT_TOOL_PATH/files/bin:$PATH"
+
+# show env in no args left
+if [ -z "$1" ]; then
+IFS='&&';read -ra a1 <<< $x
+for i in "${a1[@]}"
+do
+if [ ! -z "$i" ]; then
+echo $i
+fi
+done
+exit
+fi
+
 # run
 cmd="$x && $1"
 # echo cmd="$cmd"

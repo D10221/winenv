@@ -3,12 +3,21 @@
 Sets env vars and paths to help run an arbitrary command on steam wine/proton app prefixes
 
 # usage  
+Show usage
+```
+winenv # with no arguments
+```
 
+Run ```$command``` with ```$APPID``` env
 ```
 winenv <APPID> '<shell-command>'
 ```
-Or 
-
+Show env for ```$APPID```
+```
+winenv <APPID>' # show env for <APPID>" 
+```
+ 
+TODO:
 ```bash
 winenv install   # TODO: copy it self to "$HOME/.local/bin/"
 winenv uninstall # TODO: remove it self from "$HOME/.local/bin/"
@@ -31,7 +40,19 @@ Reads from:
 ```$HOME\.config\winenv\.winenv```  
 In That order
 
-## Ex:
+
+ ### ...
+
+ https://wiki.winehq.org/List_of_Commands
+
+## Dependencies
+
+- bash
+- steamtinkerlaunch
+- steam
+- GE-Proton
+
+## Examples
 
 ### Winecfg
 
@@ -90,14 +111,8 @@ winenv 244210 'wine winepath c:\'
  winenv 244210 'wine taskmgr'
  ```
 
- ### ...
+ ### Which proton
 
- https://wiki.winehq.org/List_of_Commands
-
-## Dependencies
-
-- steamtinkerlaunch
-- winetricks ? 
-- protontricks ? 
-- steam
-- GE-Proton
+ ```bash
+ ./winenv 244210 'which proton' # which proton I'm running
+ ```
