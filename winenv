@@ -39,8 +39,8 @@ STEAM_APPS_COMMON=\$STEAM_APPS/common
 STEAM_COMPAT_CLIENT_INSTALL_PATH=\$STEAM_HOME
 STEAM_COMPATTOOLS=\$STEAM_HOME/compatibilitytools.d
 # $fname
-${fname}=$fpath
-${fname}_CONFIG=\$HOME/.config/$fname/.$fname
+${fname^^}=$fpath
+${fname^^}_CONFIG=\$HOME/.config/$fname/.$fname
 LOCAL_BIN=~/.local/bin
 " >>"$cfg_global"
     source "$cfg_global"
@@ -125,7 +125,7 @@ fi
 # wine
 export WINE=$COMPAT_TOOL_PATH/files/bin/wine # GE-Proton
 if [ -f "$WINE" ]; then
-    echo WINE=$WINE
+    echo WINE=$WINE 
 else
     echo "Can't find WINE='$WINE'" >&2
     exit 1
