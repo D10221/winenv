@@ -80,9 +80,8 @@ uninstall)
     exit
     ;;
 update)        
-    # tmp=$(mktemp)
-    # curl $fetch > $tmp    
-    tmp="/tmp/tmp.EZIaG85Kok"
+    tmp=$(mktemp)
+    curl $fetch > $tmp    
     new_version="$(get_version "$(grep "version=" $tmp)")"
     if [ -z "$new_version" ]; then
         echo "see file: '$tmp' version ($new_version) is not valid or not foud"
