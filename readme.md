@@ -19,9 +19,9 @@ winenv <APPID>' # show env for <APPID>"
  
 TODO:
 ```bash
-winenv install   # TODO: copy it self to "$HOME/.local/bin/"
-winenv uninstall # TODO: remove it self from "$HOME/.local/bin/"
-winenv update    # TODO: replace it self with new version"
+winenv install   # copy it self to "$HOME/.local/bin/"
+winenv uninstall # remove it self from "$HOME/.local/bin/" and it's config from "$HOME/.config/winenv"
+winenv update    # replace it self with new version
 ```
 
 # Config
