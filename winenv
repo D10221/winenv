@@ -6,13 +6,13 @@
 #
 
 # meta
-fname=$(basename $0)
 version=0.0.5
-cwd="$(
+fname=$(basename $0)
+basedir="$(
     cd -- "$(dirname "$0")" >/dev/null 2>&1
     pwd -P
 )"
-fpath="$cwd/$fname"
+fpath="$basedir/$fname"
 url="https://github.com/D10221/$fname"
 fetch="https://raw.githubusercontent.com/D10221/$fname/main/$fname"
 desc='Sets env vars and paths to help run an arbitrary command on steam wine/proton app prefixes'
