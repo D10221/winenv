@@ -6,7 +6,7 @@
 #
 
 # meta
-version=0.0.5
+version=0.0.6
 fname=$(basename $0)
 basedir="$(
     cd -- "$(dirname "$0")" >/dev/null 2>&1
