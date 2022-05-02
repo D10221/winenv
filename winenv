@@ -6,7 +6,7 @@
 #
 
 # meta
-version=0.0.6
+version=0.0.7
 fname=$(basename $0)
 basedir="$(
     cd -- "$(dirname "$0")" >/dev/null 2>&1
@@ -119,6 +119,12 @@ if ! [[ $APPID =~ $re ]]; then
     APPID=$id
 fi
 
+# APP Manifest
+APP_MANIFEST="$STEAM_APPS/appmanifest_$APPID.acf"
+# APP DIR
+read -ra app_dir <<<"$(cat $APP_MANIFEST|grep installdir)"
+APP_DIR="$(echo $STEAM_APPS_COMMON/${app_dir[1]}| tr -d \")"
+
 # STEAM_COMPAT_DATA_PATH
 IFS=';' read -ra a <<<"$(steamtinkerlaunch getcompatdata $APPID)"
 STEAM_COMPAT_DATA_PATH="${a[1]}"
@@ -161,6 +167,8 @@ fi
 
 # exports
 x="export APPID=$APPID &&"
+x+="export APP_MANIFEST=$APP_MANIFEST &&"
+x+="export APP_DIR="$APP_DIR" &&"
 x+="export WINEPREFIX=$WINEPREFIX &&"
 x+="export WINE=$WINE &&"
 x+="export PROTON=$PROTON &&"
@@ -184,4 +192,4 @@ fi
 # run
 cmd="$x && $1"
 # echo cmd="$cmd"
-bash -c "$cmd"
+bash -c "$cmd" 
