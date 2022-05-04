@@ -130,6 +130,13 @@ if ! [[ $APPID =~ $re ]]; then
     APPID=$id
 fi
 
+# TODO
+function library_paths {
+    libs=$(cat $STEAM_LIBRARIES | node main.js |jq '.libraryfolders[].path?')
+    read -ra lib_paths <<<"$libs"
+}
+
+
 # APP Manifest
 APP_MANIFEST="$STEAM_APPS/appmanifest_$APPID.acf"
 # APP DIR
