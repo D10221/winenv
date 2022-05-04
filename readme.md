@@ -52,6 +52,7 @@ In That order
 - steam
 - GE-Proton
 - nodejs
+- [vdf2json](https://github.com/d10221/vdf2json)
 
 ## Examples
 
