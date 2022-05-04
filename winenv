@@ -116,6 +116,14 @@ update-config)
     ;;
 esac
 
+# libraryfolders: (WIP)
+libs="$(cat $STEAM_LIBRARIES |vdf2json |jq '.libraryfolders[].path?')"
+echo libs=$libs
+read -d " " -ra _libs <<<$libs
+for p in "${_libs[@]}"; do
+  echo lib=$p
+done
+
 APPID=$1
 shift
 # if is not a number
@@ -129,13 +137,6 @@ if ! [[ $APPID =~ $re ]]; then
     fi
     APPID=$id
 fi
-
-# TODO
-function library_paths {
-    libs=$(cat $STEAM_LIBRARIES | node main.js |jq '.libraryfolders[].path?')
-    read -ra lib_paths <<<"$libs"
-}
-
 
 # APP Manifest
 APP_MANIFEST="$STEAM_APPS/appmanifest_$APPID.acf"
