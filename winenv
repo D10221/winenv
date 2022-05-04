@@ -6,7 +6,7 @@
 #
 
 # meta
-version=0.0.7
+version=0.0.8
 fname=$(basename $0)
 basedir="$(
     cd -- "$(dirname "$0")" >/dev/null 2>&1
@@ -31,6 +31,22 @@ if [ -z "$1" ]; then
     exit
 fi
 
+function make_config {
+    mkdir -p "$(dirname $cfg_global)"
+    echo "#!/usr/bin/env bash
+# steam
+STEAM_HOME=\$HOME/.local/share/Steam
+STEAM_APPS=\$STEAM_HOME/steamapps
+STEAM_APPS_COMMON=\$STEAM_APPS/common
+STEAM_LIBRARIES=\$STEAM_HOME/config/libraryfolders.vdf
+# steam compat
+STEAM_COMPAT_CLIENT_INSTALL_PATH=\$STEAM_HOME
+STEAM_COMPATTOOLS=\$STEAM_HOME/compatibilitytools.d
+# '$fname'
+${fname^^}_CONFIG=\$HOME/.config/$fname/.$fname
+" >"$cfg_global"
+}
+
 # config
 cfg_global="$HOME/.config/$fname/.$fname" # "~/.config/winenv/.winenv"
 cfg_cwd="$PWD/.$fname"                    # "./.winenv"
@@ -39,18 +55,7 @@ if [ -f "$cfg_cwd" ]; then
 elif [ -f "$cfg_global" ]; then
     source "$cfg_global"
 else
-    mkdir -p "$(dirname $cfg_global)"
-    echo "#!/usr/bin/env bash
-# steam
-STEAM_HOME=\$HOME/.local/share/Steam
-STEAM_APPS=\$STEAM_HOME/steamapps
-STEAM_APPS_COMMON=\$STEAM_APPS/common
-# steam compat
-STEAM_COMPAT_CLIENT_INSTALL_PATH=\$STEAM_HOME
-STEAM_COMPATTOOLS=\$STEAM_HOME/compatibilitytools.d
-# '$fname'
-${fname^^}_CONFIG=\$HOME/.config/$fname/.$fname
-" >>"$cfg_global"
+    make_config
     source "$cfg_global"
 fi
 
@@ -101,6 +106,12 @@ update)
         bak="$bakd/$fname.$version.bak"
         mkdir -p "$bakd" && cp "$fpath" "$bak" && cat "$tmp" >"$fpath" && echo "Updated: see backup at $bak" && exit 0 || echo "error updating" && exit 1
     fi
+    exit
+    ;;
+update-config)
+    make_config
+    cat "$cfg_global"
+    echo "$cfg_global"
     exit
     ;;
 esac

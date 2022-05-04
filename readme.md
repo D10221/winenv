@@ -51,6 +51,7 @@ In That order
 - steamtinkerlaunch
 - steam
 - GE-Proton
+- nodejs
 
 ## Examples
 
