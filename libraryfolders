@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+# Meta
+_name=$(basename $0)
+_dir="$(
+    cd -- "$(dirname "$0")" >/dev/null 2>&1
+    pwd -P
+)"
+_path="$basedir/$fname"
+
+# usage './libraryfolders $STEAM_LIBRARIES'
+libs=$(cat $1 |vdf2json |jq '.libraryfolders[].path?')
+read -d " " -ra _libs <<<$libs
+for p in "${_libs[@]}"; do
+  echo $p|tr -d \"
+done

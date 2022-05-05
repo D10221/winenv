@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+# Meta
+_name=$(basename $0)
+_dir="$(
+    cd -- "$(dirname "$0")" >/dev/null 2>&1
+    pwd -P
+)"
+_path="$basedir/$fname"
+
+# usage: './appmanifest $STEAM_LIBRARIES'
+# example: './appmanifest ~/.local/share/Steam/config/libraryfolders.vdf json|jq .AppState.name' # list names
+# example: ./appmanifest ~/.local/share/Steam/config/libraryfolders.vdf json|jq '.AppState | {appid,name,installdir}' # objects
+# example: ./appmanifest ~/.local/share/Steam/config/libraryfolders.vdf json|jq '.AppState | {(.name):.appid,installdir}'| jq -s add # merge results into 1 obj
+# example: 'echo $(./appmanifest ~/.local/share/Steam/config/libraryfolders.vdf json|jq '.AppState | {name,appid, installdir}') | jq -s' # result array
+# example: 'mkdir -p .temp && echo $(./appmanifest ~/.local/share/Steam/config/libraryfolders.vdf json|jq '.AppState | {name,appid, installdir}') |jq -s > .temp/appmanifest.json' # app DB
+# more: 'https://stedolan.github.io/jq/manual/#Invokingjq'
+
+folders=$(./libraryfolders $1)
+read -d "\n" -ra _folders <<<$folders
+for p in "${_folders[@]}"; do
+  entries=$(ls $p/steamapps/appmanifest_*.acf)  
+  read -d " "  -ra _entries <<<$entries
+  for e in "${_entries[@]}"; do
+    if [ "$2" == "json" ]; then
+      cat $e | vdf2json
+    elif [ "$2" == 'acf' ]; then
+      cat $e
+    else 
+      echo "$e"
+    fi
+  done
+done
