@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+#
+# example: './appmanifest ~/.local/share/Steam/config/libraryfolders.vdf json|jq .AppState.name' # list names
+# example: ./appmanifest ~/.local/share/Steam/config/libraryfolders.vdf json|jq '.AppState | {appid,name,installdir}' # objects
+# example: ./appmanifest ~/.local/share/Steam/config/libraryfolders.vdf json|jq '.AppState | {(.name):.appid,installdir}'| jq -s add # merge results into 1 obj
+# example: 'echo $(./appmanifest ~/.local/share/Steam/config/libraryfolders.vdf json|jq '.AppState | {name,appid, installdir}') | jq -s' # result array
+# example: 'mkdir -p .temp && echo $(./appmanifest ~/.local/share/Steam/config/libraryfolders.vdf json|jq '.AppState | {name,appid, installdir}') |jq -s > .temp/appmanifest.json' # app DB
+# more: 'https://stedolan.github.io/jq/manual/#Invokingjq'
+#
+
+ # Meta
+_name=$(basename $0)
+_dir="$(
+    cd -- "$(dirname "$0")" >/dev/null 2>&1
+    pwd -P
+)"
+_path="$basedir/$fname"
+# env
+libraryfolders=${1:-$HOME/.local/share/Steam/config/libraryfolders.vdf}
+
+#
+# appmanifest=$($_dir/appmanifest "$libraryfolders" json |jq '.AppState | {name,appid,installdir}' |jq -s) 
+
+appmanifest=$($_dir/appmanifest "$libraryfolders")
+read -d "\n" -ra A <<<$appmanifest
+for a in "${A[@]}"; do
+    echo $(cat "$a" | vdf2json | jq ".AppState | {path:\"$a\",name,appid, installdir}") 
+done

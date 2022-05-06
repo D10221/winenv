@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# usage './libraryfolders ~/.local/share/Steam/config/libraryfolders.vdf'
+
 # Meta
 _name=$(basename $0)
 _dir="$(
@@ -7,10 +9,9 @@ _dir="$(
     pwd -P
 )"
 _path="$basedir/$fname"
-
-# usage './libraryfolders $STEAM_LIBRARIES'
-libs=$(cat $1 |vdf2json |jq '.libraryfolders[].path?')
-read -d " " -ra _libs <<<$libs
-for p in "${_libs[@]}"; do
+libraryfolders=${1:-$HOME/.local/share/Steam/config/libraryfolders.vdf}
+libs=$(cat $libraryfolders |vdf2json |jq '.libraryfolders[].path?')
+read -d " " -ra A <<<$libs
+for p in "${A[@]}"; do
   echo $p|tr -d \"
 done

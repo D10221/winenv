@@ -8,11 +8,11 @@
 # meta
 version=0.0.8
 fname=$(basename $0)
-basedir="$(
+_dir="$(
     cd -- "$(dirname "$0")" >/dev/null 2>&1
     pwd -P
 )"
-fpath="$basedir/$fname"
+_name="$_dir/$fname"
 url="https://github.com/D10221/$fname"
 fetch="https://raw.githubusercontent.com/D10221/$fname/main/$fname"
 desc='Sets env vars and paths to help run an arbitrary command on steam wine/proton app prefixes'
@@ -38,7 +38,6 @@ function make_config {
 STEAM_HOME=\$HOME/.local/share/Steam
 STEAM_APPS=\$STEAM_HOME/steamapps
 STEAM_APPS_COMMON=\$STEAM_APPS/common
-STEAM_LIBRARIES=\$STEAM_HOME/config/libraryfolders.vdf
 # steam compat
 STEAM_COMPAT_CLIENT_INSTALL_PATH=\$STEAM_HOME
 STEAM_COMPATTOOLS=\$STEAM_HOME/compatibilitytools.d
@@ -73,7 +72,7 @@ install)
         echo "$fname is already installed" >&2
         exit 1
     fi
-    cp "$fpath" $install_target
+    cp "$_name" $install_target
     exit
     ;;
 uninstall)
@@ -104,7 +103,7 @@ update)
     elif [[ "$new_version" > "$version" ]]; then
         bakd="$HOME/.local/share/$fname"
         bak="$bakd/$fname.$version.bak"
-        mkdir -p "$bakd" && cp "$fpath" "$bak" && cat "$tmp" >"$fpath" && echo "Updated: see backup at $bak" && exit 0 || echo "error updating" && exit 1
+        mkdir -p "$bakd" && cp "$_name" "$bak" && cat "$tmp" >"$_name" && echo "Updated: see backup at $bak" && exit 0 || echo "error updating" && exit 1
     fi
     exit
     ;;
@@ -117,12 +116,8 @@ update-config)
 esac
 
 # libraryfolders: (WIP)
-libs="$(cat $STEAM_LIBRARIES |vdf2json |jq '.libraryfolders[].path?')"
-echo libs=$libs
-read -d " " -ra _libs <<<$libs
-for p in "${_libs[@]}"; do
-  echo lib=$p
-done
+libraryfolders=$STEAM_HOME/config/libraryfolders.vdf
+# TODO: $_dir/appmanifest_json $libraryfolders
 
 APPID=$1
 shift
