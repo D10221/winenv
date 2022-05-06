@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+#
+# Utility: 
+#
+
+# usage: './appmanifest $STEAM_LIBRARIES'
+
+# Meta
+_name=$(basename $0)
+_dir="$(
+    cd -- "$(dirname "$0")" >/dev/null 2>&1
+    pwd -P
+)"
+_path="$basedir/$fname"
+
+#
+libraryfolders=${1:-$HOME/.local/share/Steam/config/libraryfolders.vdf}
+read -d "\n" -ra _folders <<<"$(cat $libraryfolders | vdf2json|jq '.libraryfolders[].path? ' )"
+for libraryfolder in "${_folders[@]}"; do
+    libraryfolder=$(echo $libraryfolder|tr -d \") # remove quotes
+    entries=$(ls $libraryfolder/steamapps/appmanifest_*.acf)  
+    read -d " "  -ra _entries <<<$entries
+    for appmanifest in "${_entries[@]}"; do
+        manifest=$(cat $appmanifest | vdf2json | jq )
+        args="--arg libraryfolder $libraryfolder --arg appmanifest $appmanifest"
+        echo $manifest | jq $args '.AppState | {name,appid,installdir,libraryfolder:$libraryfolder, appmanifest:$appmanifest}'
+    done    
+done
