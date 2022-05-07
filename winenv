@@ -16,7 +16,11 @@ _name="$_dir/$name"
 url="https://github.com/D10221/$name"
 fetch="https://raw.githubusercontent.com/D10221/$name/main/$name"
 desc='Sets env vars and paths to help run an arbitrary command on steam wine/proton app prefixes'
-
+#
+function error {
+    echo $1 
+    exit $2
+}
 # usage
 if [ -z "$1" ]; then
     echo "${name}: v${version} ${url}"
@@ -30,7 +34,7 @@ if [ -z "$1" ]; then
     echo "\$ $name <install|uninstall|update>' # Not implemented"
     exit
 fi
-
+#
 function make_config {
     mkdir -p "$(dirname $cfg_global)"
     echo "#!/usr/bin/env bash
@@ -117,6 +121,7 @@ esac
 
 # All Installed apps manifests
 libraryfolders=$STEAM_HOME/config/libraryfolders.vdf
+#
 function get_appmanifests
 {
     read -d "\n" -ra _folders <<<"$(cat $libraryfolders | vdf2json|jq '.libraryfolders[].path? ' )"
@@ -131,26 +136,22 @@ for libraryfolder in "${_folders[@]}"; do
     done    
 done
 }
+#
 appmanifest=$(get_appmanifests | jq -s)
-
+#
 function get_appmanifest_by_id 
 {
     echo $appmanifest |jq --argjson id "$1" '.[]| select(.appid==$id)'
 }
-
-APPID=$1
-shift
+#
+APPID=$1;shift
 # if is not a number
 re='^[0-9]+$'
 if ! [[ $APPID =~ $re ]]; then
-    id=$($_dir/appmanifest | jq -s | jq --arg N $APPID '.[]|select(.name|test($N;"i"))|.appid')
-    if [ -z "$id" ]; then
-        echo "Can't find app id for '$APPID'" >&2
-        exit 1
-    fi
-    #TODO: can be many id matching!    
-    APPID=$id
-    echo "manifest=$(get_appmanifest_by_id $APPID)"
+ID_SEARCH=$APPID && echo "'$APPID' is not a number, searching for appid." && APPID=$(echo $appmanifest | jq --arg N $APPID '.[]|select(.name|test($N;"i"))|.appid') \
+&& [[ $APPID =~ $re ]] \
+&& echo found APPID=$APPID \
+|| error "Can't find app id for '$ID_SEARCH', search result '$APPID 'is not a number" 1
 fi
 
 # By ID

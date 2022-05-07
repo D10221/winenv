@@ -13,5 +13,10 @@ _dir="$(
     pwd -P
 )"
 _name="$_dir/$name"
-
-$_dir/appmanifest | jq -s | jq --arg N $1 '.[]|select(.name|test($N;"i"))|.appid'
+#
+appmanifest=$($_dir/appmanifest | jq -s)
+re='^[0-9]+$'
+APPID=$(echo $appmanifest | jq --arg N $1 '.[]|select(.name|test($N;"i"))|.appid') \
+&& [[ $APPID =~ $re ]] \
+&& echo $APPID \
+|| echo "Can't find ID for NAME=$1"
