@@ -44,7 +44,6 @@ STEAM_COMPAT_CLIENT_INSTALL_PATH=\$HOME/.local/share/Steam
 ${name^^}_CONFIG=\$HOME/.config/$name/.$name
 " >"$cfg_global"
 }
-
 # config
 cfg_global="$HOME/.config/$name/.$name" # "~/.config/winenv/.winenv"
 cfg_cwd="$PWD/.$name"                    # "./.winenv"
@@ -56,7 +55,6 @@ else
     make_config
     source "$cfg_global"
 fi
-
 # self update
 function get_version {
     IFS='='
@@ -113,7 +111,6 @@ update-config)
     exit
     ;;
 esac
-
 # All Installed apps manifests
 libraryfolders=$STEAM_COMPAT_CLIENT_INSTALL_PATH/config/libraryfolders.vdf
 #
@@ -186,7 +183,6 @@ WINE=$COMPAT_TOOL_PATH/files/bin/wine # GE-Proton
 if [ ! -f "$WINE" ]; then
     error "WINE='$WINE' is not a file" 1
 fi
-
 # exports
 x="export APPID=$APPID &&"
 x+="export APP_MANIFEST=$APP_MANIFEST &&"
@@ -197,7 +193,6 @@ x+="export PROTON=$PROTON &&"
 x+="export STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH &&"
 x+="export STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_CLIENT_INSTALL_PATH &&"
 x+="export PATH=$COMPAT_TOOL_PATH:$COMPAT_TOOL_PATH/files/bin:$PATH"
-
 # show env if no args left
 if [ -z "$1" ]; then
     IFS='&&'
@@ -209,7 +204,6 @@ if [ -z "$1" ]; then
     done
     exit
 fi
-
 # run
 cmd="$x && $1"
 # echo cmd="$cmd"
