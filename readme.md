@@ -48,7 +48,7 @@ In That order
 ## Dependencies
 
 - bash
-- steamtinkerlaunch
+- jq
 - steam
 - GE-Proton
 - nodejs

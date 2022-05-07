@@ -3,7 +3,7 @@
 # Utility: 
 #
 
-# usage: './appmanifest $STEAM_LIBRARIES'
+# usage: './appmanifest $STEAM_LIBRARIES <optional jq query>'
 
 # Meta
 _name=$(basename $0)
@@ -23,6 +23,10 @@ for libraryfolder in "${_folders[@]}"; do
     for appmanifest in "${_entries[@]}"; do
         manifest=$(cat $appmanifest | vdf2json | jq )
         args="--arg libraryfolder $libraryfolder --arg appmanifest $appmanifest"
+        if [ -z "$2" ]; then
         echo $manifest | jq $args '.AppState | {name,appid,installdir,libraryfolder:$libraryfolder, appmanifest:$appmanifest}'
+        else
+        echo $manifest | jq $2
+        fi
     done    
 done

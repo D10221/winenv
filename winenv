@@ -18,7 +18,7 @@ fetch="https://raw.githubusercontent.com/D10221/$name/main/$name"
 desc='Sets env vars and paths to help run an arbitrary command on steam wine/proton app prefixes'
 #
 function error {
-    echo $1 
+    echo $1>&2
     exit $2
 }
 # usage
@@ -39,12 +39,7 @@ function make_config {
     mkdir -p "$(dirname $cfg_global)"
     echo "#!/usr/bin/env bash
 # steam
-STEAM_HOME=\$HOME/.local/share/Steam
-STEAM_APPS=\$STEAM_HOME/steamapps
-STEAM_APPS_COMMON=\$STEAM_APPS/common
-# steam compat
-STEAM_COMPAT_CLIENT_INSTALL_PATH=\$STEAM_HOME
-STEAM_COMPATTOOLS=\$STEAM_HOME/compatibilitytools.d
+STEAM_COMPAT_CLIENT_INSTALL_PATH=\$HOME/.local/share/Steam
 # '$name'
 ${name^^}_CONFIG=\$HOME/.config/$name/.$name
 " >"$cfg_global"
@@ -120,7 +115,7 @@ update-config)
 esac
 
 # All Installed apps manifests
-libraryfolders=$STEAM_HOME/config/libraryfolders.vdf
+libraryfolders=$STEAM_COMPAT_CLIENT_INSTALL_PATH/config/libraryfolders.vdf
 #
 function get_appmanifests
 {
@@ -145,58 +140,51 @@ function get_appmanifest_by_id
 }
 #
 APPID=$1;shift
-# if is not a number
+# if $APPID is not a number
 re='^[0-9]+$'
 if ! [[ $APPID =~ $re ]]; then
-ID_SEARCH=$APPID && echo "'$APPID' is not a number, searching for appid." && APPID=$(echo $appmanifest | jq --arg N $APPID '.[]|select(.name|test($N;"i"))|.appid') \
+ID_SEARCH=$APPID && echo "'$APPID' is not a number, searching for appid.">&2  && APPID=$(echo $appmanifest | jq --arg N $APPID '.[]|select(.name|test($N;"i"))|.appid') \
 && [[ $APPID =~ $re ]] \
-&& echo found APPID=$APPID \
+&& echo found APPID=$APPID >&2 \
 || error "Can't find app id for '$ID_SEARCH', search result '$APPID 'is not a number" 1
 fi
 
 # By ID
 appmanifest_by_id=$(get_appmanifest_by_id $APPID)
 APP_MANIFEST=$( echo $appmanifest_by_id |jq '.appmanifest' |tr -d \")
-APP_DIR=$( echo $appmanifest_by_id |jq '.libraryfolder+"/steamapps/common/"+.installdir') #"$(echo $STEAM_APPS_COMMON/${app_dir[1]}| tr -d \")"
+APP_DIR=$( echo $appmanifest_by_id |jq '.libraryfolder+"/steamapps/common/"+.installdir')
 
 # STEAM_COMPAT_DATA_PATH
-IFS=';' read -ra a <<<"$(steamtinkerlaunch getcompatdata $APPID)"
-STEAM_COMPAT_DATA_PATH="${a[1]}"
+STEAM_COMPAT_DATA_PATH=$(echo $appmanifest_by_id| jq --arg id $APPID '.libraryfolder+"/steamapps/compatdata/"+$id'|tr -d \")
 if [ ! -d "$STEAM_COMPAT_DATA_PATH" ]; then
-    echo "STEAM_COMPAT_DATA_PATH='$STEAM_COMPAT_DATA_PATH' doesn't exists" >&2
-    exit 1
+    error "STEAM_COMPAT_DATA_PATH='$STEAM_COMPAT_DATA_PATH' is not a directory" 1
 fi
 
 #  wine prefix
 WINEPREFIX="$STEAM_COMPAT_DATA_PATH/pfx"
 if [ ! -d "$WINEPREFIX" ]; then
-    echo "WINEPREFIX=$WINEPREFIX doesn't exists"
-    exit 1
+    error "WINEPREFIX=$WINEPREFIX is not a directory" 1    
 fi
 
 #  Compat tool Version
 COMPAT_TOOL_VERSION=$(cat $STEAM_COMPAT_DATA_PATH/version)
 if [ -z "$COMPAT_TOOL_VERSION" ]; then
-    echo "Can't find COMPAT_TOOL_VERSION for APPID=$APPID with STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH" >&2
-    exit 1
+    error "Can't find COMPAT_TOOL_VERSION for APPID=$APPID with STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH" 1    
 fi
 # Compat tool path
-COMPAT_TOOL_PATH="$STEAM_COMPATTOOLS/$COMPAT_TOOL_VERSION"
+COMPAT_TOOL_PATH="$STEAM_COMPAT_CLIENT_INSTALL_PATH/compatibilitytools.d/$COMPAT_TOOL_VERSION"
 if [ ! -d "$COMPAT_TOOL_PATH" ]; then
-    echo "Can't find COMPAT_TOOL_PATH='$COMPAT_TOOL_PATH'" >&2
-    exit 1
+    error "COMPAT_TOOL_PATH='$COMPAT_TOOL_PATH' is not a directory" 1
 fi
 # proton
 PROTON="$COMPAT_TOOL_PATH/proton"
 if [ ! -f "$PROTON" ]; then
-    echo "Can't find PROTON='$PROTON'" >&2
-    exit 1
+    error "PROTON='$PROTON' is not a file" 1
 fi
 # wine
 WINE=$COMPAT_TOOL_PATH/files/bin/wine # GE-Proton
 if [ ! -f "$WINE" ]; then
-    echo "Can't find WINE='$WINE'" >&2
-    exit 1
+    error "WINE='$WINE' is not a file" 1
 fi
 
 # exports
@@ -208,7 +196,6 @@ x+="export WINE=$WINE &&"
 x+="export PROTON=$PROTON &&"
 x+="export STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH &&"
 x+="export STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_CLIENT_INSTALL_PATH &&"
-x+="export STEAM_APPS_COMMON=$STEAM_APPS_COMMON &&"
 x+="export PATH=$COMPAT_TOOL_PATH:$COMPAT_TOOL_PATH/files/bin:$PATH"
 
 # show env if no args left
@@ -217,7 +204,7 @@ if [ -z "$1" ]; then
     read -ra a1 <<<$x
     for i in "${a1[@]}"; do
         if [ ! -z "$i" ]; then
-            echo $i
+            echo $i |tr -d 'export '
         fi
     done
     exit
