@@ -6,17 +6,17 @@
 #
 
 # this meta
-version=0.0.8
-name=$(basename $0)
-_dir="$(
+SELF_VERSION=0.0.8
+SELF_NAME=$(basename $0)
+SELF_DIR="$(
     cd -- "$(dirname "$0")" >/dev/null 2>&1
     pwd -P
 )"
-_name="$_dir/$name"
-url="https://github.com/D10221/$name"
-fetch="https://raw.githubusercontent.com/D10221/$name/main/$name"
-desc='Sets env vars and paths to help run an arbitrary command on steam wine/proton app prefixes'
-install_target="$HOME/.local/bin/$name"
+SELF_PATH="$SELF_DIR/$SELF_NAME"
+SELF_URL="https://github.com/D10221/$SELF_NAME"
+SELF_SOURCE_URL="https://raw.githubusercontent.com/D10221/$SELF_NAME/main/$SELF_NAME"
+SELF_DESC='Sets env vars and paths to help run an arbitrary command on steam wine/proton app prefixes'
+SELF_INSTALL_TARGET="$HOME/.local/bin/$SELF_NAME"
 # VARS
 STEAM_COMPAT_CLIENT_INSTALL_PATH=${STEAM_COMPAT_CLIENT_INSTALL_PATH:-$HOME/.local/share/Steam}
 if ! [ -d "$STEAM_COMPAT_CLIENT_INSTALL_PATH" ]; then
@@ -113,21 +113,21 @@ function show_id ()
     echo $(get_app_id_by_name "$(get_appmanifests | jq -s)" $1)
 }
 function usage(){
-    echo "${name}: v${version} ${url}"
+    echo "$SELF_NAME: v$SELF_VERSION $SELF_URL"
     echo
-    echo "'$desc'"
+    echo "'$SELF_DESC'"
     echo
     echo "Usage: "
-    echo " $name # with no args, shows this"
-    echo " $name [APPID|APP_NAME]' # show env for APPID or APP_NAME"
-    echo " $name [APPID|APP_NAME] [COMMAND]' # run COMMAND with <APPID or APP_NAME>'s env"
-    echo " $name [APPID|APP_NAME] [COMMAND]' # run COMMAND with <APPID or APP_NAME>'s env"
-    echo " $name info ' # show info for all installed apps, returns json format"
-    echo " $name info [APPID|APP_NAME]' # show info for [APPID|APP_NAME], returns json format"
-    echo " $name id [APP_NAME]' # search for appid for given name match, returns json format"
-    echo " $name install' # install '$name' script into ~/.local/bin"
-    echo " $name uninstall' # remove '$name' script into ~/.local/bin"
-    echo " $name update' # update '$name' script"
+    echo " $SELF_NAME # with no args, shows this"
+    echo " $SELF_NAME [APPID|APP_NAME]' # show env for APPID or APP_NAME"
+    echo " $SELF_NAME [APPID|APP_NAME] [COMMAND]' # run COMMAND with <APPID or APP_NAME>'s env"
+    echo " $SELF_NAME [APPID|APP_NAME] [COMMAND]' # run COMMAND with <APPID or APP_NAME>'s env"
+    echo " $SELF_NAME info ' # show info for all installed apps, returns json format"
+    echo " $SELF_NAME info [APPID|APP_NAME]' # show info for [APPID|APP_NAME], returns json format"
+    echo " $SELF_NAME id [APP_NAME]' # search for appid for given name match, returns json format"
+    echo " $SELF_NAME install' # install '$SELF_NAME' script into ~/.local/bin"
+    echo " $SELF_NAME uninstall' # remove '$SELF_NAME' script into ~/.local/bin"
+    echo " $SELF_NAME update' # update '$SELF_NAME' script"
     echo "Config:"
     echo " \$STEAM_COMPAT_CLIENT_INSTALL_PATH # defaults to '~/.local/share/Steam'"
 }
@@ -140,21 +140,21 @@ function get_version {
 # install into user/bin
 function self_install()
 {
-    if [ -f $install_target ]; then
-        echo "$_name is already installed" >&2
+    if [ -f $SELF_INSTALL_TARGET ]; then
+        echo "$SELF_NAME is already installed" >&2
         exit 1
     fi
-    cp "$_name" $install_target
+    cp "$SELF_PATH" $SELF_INSTALL_TARGET
 }
 function self_uninstall () 
 {
     # remove from user system
-    if [ ! -f $install_target ]; then
-        echo "$_name is not installed" >&2
+    if [ ! -f $SELF_INSTALL_TARGET ]; then
+        echo "$SELF_NAME is not installed" >&2
         exit 1
     fi
-    rm "$install_target " -rf    
-    echo "get it from $url"
+    rm "$SELF_INSTALL_TARGET " -rf    
+    echo "get it from $SELF_URL"
 }
 function self_update ()
 {
@@ -165,16 +165,16 @@ function self_update ()
     if [ -z "$new_version" ]; then
         echo "error: can't udpate, see file: '$tmp' version ($new_version) is not valid or not foud"
         exit 1
-    elif [[ "$version" > "$new_version" ]]; then
-        echo "error: can't udpate, see file: '$tmp' version ($new_version) is mayor than this version ($version)"
+    elif [[ "$SELF_VERSION" > "$new_version" ]]; then
+        echo "error: can't udpate, see file: '$tmp' version ($new_version) is mayor than this version ($SELF_VERSION)"
         exit 1
-    elif [[ "$new_version" == "$version" ]]; then
-        echo "error: can't udpate, see file: '$tmp' version ($new_version) equals this ($version)"        
+    elif [[ "$new_version" == "$SELF_VERSION" ]]; then
+        echo "error: can't udpate, see file: '$tmp' version ($new_version) equals this ($SELF_VERSION)"        
         exit 1
-    elif [[ "$new_version" > "$version" ]]; then
-        bakd="$HOME/.local/share/$name"
-        bak="$bakd/$name.$version.bak"
-        mkdir -p "$bakd" && cp "$_name" "$bak" && cat "$tmp" >"$_name" && error "Updated: see backup at $bak" 0 || error "error updating" 1
+    elif [[ "$new_version" > "$SELF_VERSION" ]]; then
+        bakd="$HOME/.local/share/$SELF_NAME"
+        bak="$bakd/$SELF_NAME.$SELF_VERSION.bak"
+        mkdir -p "$bakd" && cp "$SELF_PATH" "$bak" && cat "$tmp" >"$SELF_PATH" && error "Updated: see backup at $bak" 0 || error "error updating" 1
     fi
 }
 function main () 
