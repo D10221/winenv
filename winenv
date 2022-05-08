@@ -178,7 +178,7 @@ esac
 appmanifest=$(get_appmanifests | jq -s)
 #
 APPID=$1;shift
-# if $APPID is not a number, serach app id by name
+# if $APPID is not a number, search app id by name
 if ! [[ $APPID =~ $APPID_REGEX ]]; then
     ID_SEARCH=$APPID 
     error "'$APPID' is not an ID searching for app id by name."
