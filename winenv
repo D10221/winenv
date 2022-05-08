@@ -5,7 +5,7 @@
 # on steam wine/proton app prefixes
 #
 
-# meta
+# this meta
 version=0.0.8
 name=$(basename $0)
 _dir="$(
@@ -16,7 +16,15 @@ _name="$_dir/$name"
 url="https://github.com/D10221/$name"
 fetch="https://raw.githubusercontent.com/D10221/$name/main/$name"
 desc='Sets env vars and paths to help run an arbitrary command on steam wine/proton app prefixes'
-# error
+install_target="$HOME/.local/bin/$name"
+# VARS
+STEAM_COMPAT_CLIENT_INSTALL_PATH=${STEAM_COMPAT_CLIENT_INSTALL_PATH:-$HOME/.local/share/Steam}
+if ! [ -d "$STEAM_COMPAT_CLIENT_INSTALL_PATH" ]; then
+error "STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_CLIENT_INSTALL_PATH is not a directory" 1
+fi
+# 
+# output $1 to stderr and exit if $2
+# 
 function error {
 # colors
     local RED='\033[0;31m'
@@ -30,30 +38,28 @@ function error {
         COLOR=$YELLOW
     fi    
     echo -e "${COLOR}$1${NOCOLOR}">&2
-    ! [ -z "$2" ] && exit $2
+    if ! [ -z "$2" ]; then
+     exit $2
+    fi
 }
-# 
-STEAM_COMPAT_CLIENT_INSTALL_PATH=${STEAM_COMPAT_CLIENT_INSTALL_PATH:-$HOME/.local/share/Steam} \
-&& ! [ -d "$STEAM_COMPAT_CLIENT_INSTALL_PATH" ] \
-&& error "STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_CLIENT_INSTALL_PATH is not a directory" 1
-#
-libraryfolders=$STEAM_COMPAT_CLIENT_INSTALL_PATH/config/libraryfolders.vdf \
-&& ! [ -f "$libraryfolders" ] \
-&& error "libraryfolders=$libraryfolders is not a file" 1
 #
 function get_appmanifests
 {
+    local libraryfolders=$STEAM_COMPAT_CLIENT_INSTALL_PATH/config/libraryfolders.vdf
+    if ! [ -f "$libraryfolders" ];then 
+        error "libraryfolders=$libraryfolders is not a file" 1
+    fi
     read -d "\n" -ra _folders <<<"$(cat $libraryfolders | vdf2json|jq '.libraryfolders[].path? ' )"
-for libraryfolder in "${_folders[@]}"; do
-    libraryfolder=$(echo $libraryfolder|tr -d \") # remove quotes
-    entries=$(ls $libraryfolder/steamapps/appmanifest_*.acf)  
-    read -d " "  -ra _entries <<<$entries
-    for appmanifest in "${_entries[@]}"; do
-        manifest=$(cat $appmanifest | vdf2json | jq )
-        args="--arg libraryfolder $libraryfolder --arg appmanifest $appmanifest"
-        echo $manifest | jq $args '.AppState | {name,appid,installdir,libraryfolder:$libraryfolder, appmanifest:$appmanifest}'
-    done    
-done
+    for libraryfolder in "${_folders[@]}"; do
+        libraryfolder=$(echo $libraryfolder|tr -d \") # remove quotes
+        entries=$(ls $libraryfolder/steamapps/appmanifest_*.acf)  
+        read -d " "  -ra _entries <<<$entries
+        for appmanifest in "${_entries[@]}"; do
+            manifest=$(cat $appmanifest | vdf2json | jq )
+            args="--arg libraryfolder $libraryfolder --arg appmanifest $appmanifest"
+            echo $manifest | jq $args '.AppState | {name,appid,installdir,libraryfolder:$libraryfolder, appmanifest:$appmanifest}'
+        done    
+    done
 }
 #
 function get_app_id_by_name ()
@@ -90,80 +96,70 @@ function showenv ()
         fi
     done    
 }
+#
+# show info in json format for givev $1="app id or name" f
+#
+function show_info (){
+    local appmanifest=$(get_appmanifests | jq -s)
+    if [ -z "$1" ]; then
+        echo $appmanifest    
+    else
+        local APPID=$(maybe_app_id $1)
+        echo $(get_appmanifest_by_id "$appmanifest" "$APPID")
+    fi
+}
+function show_id ()
+{
+    echo $(get_app_id_by_name "$(get_appmanifests | jq -s)" $1)
+}
 function usage(){
     echo "${name}: v${version} ${url}"
     echo
     echo "'$desc'"
     echo
     echo "Usage: "
-    echo "\$ $name # with no args, shows this"
-    echo "\$ $name [APPID|APP_NAME]' # show env for APPID or APP_NAME"
-    echo "\$ $name [APPID|APP_NAME] [COMMAND]' # run COMMAND with <APPID or APP_NAME>'s env"
-    echo "\$ $name [APPID|APP_NAME] [COMMAND]' # run COMMAND with <APPID or APP_NAME>'s env"
-    echo "\$ $name manifest ' # show info for all installed apps, returns json format"
-    echo "\$ $name manifest [APPID|APP_NAME]' # show info for [APPID|APP_NAME], returns json format"
-    echo "\$ $name id [APP_NAME]' # search for appid for given name match, returns json format"
-    echo "\$ $name install' # install '$name' script into ~/.local/bin"
-    echo "\$ $name uninstall' # remove '$name' script into ~/.local/bin"
-    echo "\$ $name update' # update '$name' script"
+    echo " $name # with no args, shows this"
+    echo " $name [APPID|APP_NAME]' # show env for APPID or APP_NAME"
+    echo " $name [APPID|APP_NAME] [COMMAND]' # run COMMAND with <APPID or APP_NAME>'s env"
+    echo " $name [APPID|APP_NAME] [COMMAND]' # run COMMAND with <APPID or APP_NAME>'s env"
+    echo " $name info ' # show info for all installed apps, returns json format"
+    echo " $name info [APPID|APP_NAME]' # show info for [APPID|APP_NAME], returns json format"
+    echo " $name id [APP_NAME]' # search for appid for given name match, returns json format"
+    echo " $name install' # install '$name' script into ~/.local/bin"
+    echo " $name uninstall' # remove '$name' script into ~/.local/bin"
+    echo " $name update' # update '$name' script"
+    echo "Config:"
+    echo " \$STEAM_COMPAT_CLIENT_INSTALL_PATH # defaults to '~/.local/share/Steam'"
 }
-# usage
-if [ -z "$1" ]; then
-    usage
-    exit
-fi
-#
-function make_config {
-    mkdir -p "$(dirname $cfg_global)"
-    echo "#!/usr/bin/env bash
-# steam
-STEAM_COMPAT_CLIENT_INSTALL_PATH=\$HOME/.local/share/Steam
-# '$name'
-${name^^}_CONFIG=\$HOME/.config/$name/.$name
-" >"$cfg_global"
-}
-# config
-cfg_global="$HOME/.config/$name/.$name" # "~/.config/winenv/.winenv"
-cfg_cwd="$PWD/.$name"                    # "./.winenv"
-if [ -f "$cfg_cwd" ]; then
-    source "$cfg_cwd"
-elif [ -f "$cfg_global" ]; then
-    source "$cfg_global"
-else
-    make_config
-    source "$cfg_global"
-fi
-# self update
+# this script version
 function get_version {
     IFS='='
     read -ra values <<<"$1"
     echo "${values[1]}"
 }
-install_target="$HOME/.local/bin/$name"
-case "${1}" in
-install)
-    # install into user/bin
+# install into user/bin
+function self_install()
+{
     if [ -f $install_target ]; then
-        echo "$name is already installed" >&2
+        echo "$_name is already installed" >&2
         exit 1
     fi
     cp "$_name" $install_target
-    exit
-    ;;
-uninstall)
+}
+function self_uninstall () 
+{
     # remove from user system
     if [ ! -f $install_target ]; then
-        echo "$name is not installed" >&2
+        echo "$_name is not installed" >&2
         exit 1
     fi
-    rm "$HOME/.local/bin/$name" -rf
-    rm "${name^^}_CONFIG" -rf
+    rm "$install_target " -rf    
     echo "get it from $url"
-    exit
-    ;;
-update)
+}
+function self_update ()
+{
     # download new version
-    tmp=$(mktemp)
+    local tmp=$(mktemp)
     curl $fetch >$tmp
     new_version="$(get_version "$(grep "version=" $tmp)")"
     if [ -z "$new_version" ]; then
@@ -180,87 +176,99 @@ update)
         bak="$bakd/$name.$version.bak"
         mkdir -p "$bakd" && cp "$_name" "$bak" && cat "$tmp" >"$_name" && error "Updated: see backup at $bak" 0 || error "error updating" 1
     fi
-    exit
-    ;;
-update-config)
-    make_config
-    cat "$cfg_global"
-    echo "$cfg_global"
-    exit
-    ;;
-manifest)
-    appmanifest=$(get_appmanifests | jq -s)
-    if [ -z "$2" ]; then
-        echo $appmanifest    
-    else
-        APPID=$(maybe_app_id $2)
-        echo $(get_appmanifest_by_id "$appmanifest" "$APPID")
+}
+function main () 
+{
+    # All Apps
+    local appmanifest=$(get_appmanifests | jq -s)
+    #
+    local APPID=$(maybe_app_id $1);shift
+    # App's manifest
+    local appmanifest_by_id=$(get_appmanifest_by_id "$appmanifest" "$APPID")
+    #
+    local APP_MANIFEST=$( echo $appmanifest_by_id |jq '.appmanifest' |tr -d \")
+    #
+    local APP_DIR=$( echo $appmanifest_by_id |jq '.libraryfolder+"/steamapps/common/"+.installdir' | tr -d \")
+    #
+    local APP_NAME=$( echo $appmanifest_by_id |jq '.name')
+    # STEAM_COMPAT_DATA_PATH
+    local STEAM_COMPAT_DATA_PATH=$(echo $appmanifest_by_id| jq --arg id $APPID '.libraryfolder+"/steamapps/compatdata/"+$id'|tr -d \")
+    if [ ! -d "$STEAM_COMPAT_DATA_PATH" ]; then
+        error "STEAM_COMPAT_DATA_PATH='$STEAM_COMPAT_DATA_PATH' is not a directory" 1
     fi
-    exit
-    ;;
-id)
-    echo $(get_app_id_by_name "$(get_appmanifests | jq -s)" $2)
-    exit
-    ;;
+    #  wine prefix
+    local WINEPREFIX="$STEAM_COMPAT_DATA_PATH/pfx"
+    if [ ! -d "$WINEPREFIX" ]; then
+        error "WINEPREFIX=$WINEPREFIX is not a directory" 1    
+    fi
+    #  Compat tool Version
+    local COMPAT_TOOL_VERSION=$(cat $STEAM_COMPAT_DATA_PATH/version)
+    if [ -z "$COMPAT_TOOL_VERSION" ]; then
+        error "Can't find COMPAT_TOOL_VERSION for APPID=$APPID with STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH" 1    
+    fi
+    # Compat tool path
+    local COMPAT_TOOL_PATH="$STEAM_COMPAT_CLIENT_INSTALL_PATH/compatibilitytools.d/$COMPAT_TOOL_VERSION"
+    if [ ! -d "$COMPAT_TOOL_PATH" ]; then
+        error "COMPAT_TOOL_PATH='$COMPAT_TOOL_PATH' is not a directory" 1
+    fi
+    # proton
+    local PROTON="$COMPAT_TOOL_PATH/proton"
+    if [ ! -f "$PROTON" ]; then
+        error "PROTON='$PROTON' is not a file" 1
+    fi
+    # wine
+    local WINE=$COMPAT_TOOL_PATH/files/bin/wine # GE-Proton
+    if [ ! -f "$WINE" ]; then
+        error "WINE='$WINE' is not a file" 1
+    fi
+    # exports
+    WINENVx="export APPID=$APPID &&"
+    WINENV+="export APP_DIR="$APP_DIR" &&"
+    WINENV+="export APP_NAME="$APP_NAME" &&"
+    WINENV+="export APP_MANIFEST=$APP_MANIFEST &&"
+    WINENV+="export WINEPREFIX=$WINEPREFIX &&"
+    WINENV+="export WINE=$WINE &&"
+    WINENV+="export PROTON=$PROTON &&"
+    WINENV+="export STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH &&"
+    WINENV+="export STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_CLIENT_INSTALL_PATH &&"
+    WINENV+="export PATH=$COMPAT_TOOL_PATH:$COMPAT_TOOL_PATH/files/bin:$PATH"
+    # show env if no args left
+    if [ -z "$1" ]; then
+    showenv "$WINENV" && exit
+    fi
+    # run
+    cmd="$WINENV && $1"
+    # echo cmd="$cmd"
+    bash -c "$cmd" 
+}
+# process args
+case "${1}" in
+    install)
+        self_install
+        exit 
+        ;;
+    uninstall) 
+        self_uninstall
+        exit 
+        ;;
+    update)
+        self_update
+        exit
+        ;;
+    info)
+        show_info $2
+        exit
+        ;;
+    id)
+        show_id $2
+        exit
+        ;;
+    *)
+        # usage
+        if [ -z "$1" ]; then
+            usage
+            exit
+        fi
+        main $@
+        ;;
 esac
-# All Apps
-appmanifest=$(get_appmanifests | jq -s)
-#
-APPID=$(maybe_app_id $1);shift
-# App's manifest
-appmanifest_by_id=$(get_appmanifest_by_id "$appmanifest" "$APPID")
-#
-APP_MANIFEST=$( echo $appmanifest_by_id |jq '.appmanifest' |tr -d \")
-#
-APP_DIR=$( echo $appmanifest_by_id |jq '.libraryfolder+"/steamapps/common/"+.installdir' | tr -d \")
-#
-APP_NAME=$( echo $appmanifest_by_id |jq '.name')
-# STEAM_COMPAT_DATA_PATH
-STEAM_COMPAT_DATA_PATH=$(echo $appmanifest_by_id| jq --arg id $APPID '.libraryfolder+"/steamapps/compatdata/"+$id'|tr -d \")
-if [ ! -d "$STEAM_COMPAT_DATA_PATH" ]; then
-    error "STEAM_COMPAT_DATA_PATH='$STEAM_COMPAT_DATA_PATH' is not a directory" 1
-fi
-#  wine prefix
-WINEPREFIX="$STEAM_COMPAT_DATA_PATH/pfx"
-if [ ! -d "$WINEPREFIX" ]; then
-    error "WINEPREFIX=$WINEPREFIX is not a directory" 1    
-fi
-#  Compat tool Version
-COMPAT_TOOL_VERSION=$(cat $STEAM_COMPAT_DATA_PATH/version)
-if [ -z "$COMPAT_TOOL_VERSION" ]; then
-    error "Can't find COMPAT_TOOL_VERSION for APPID=$APPID with STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH" 1    
-fi
-# Compat tool path
-COMPAT_TOOL_PATH="$STEAM_COMPAT_CLIENT_INSTALL_PATH/compatibilitytools.d/$COMPAT_TOOL_VERSION"
-if [ ! -d "$COMPAT_TOOL_PATH" ]; then
-    error "COMPAT_TOOL_PATH='$COMPAT_TOOL_PATH' is not a directory" 1
-fi
-# proton
-PROTON="$COMPAT_TOOL_PATH/proton"
-if [ ! -f "$PROTON" ]; then
-    error "PROTON='$PROTON' is not a file" 1
-fi
-# wine
-WINE=$COMPAT_TOOL_PATH/files/bin/wine # GE-Proton
-if [ ! -f "$WINE" ]; then
-    error "WINE='$WINE' is not a file" 1
-fi
-# exports
-WINENVx="export APPID=$APPID &&"
-WINENV+="export APP_DIR="$APP_DIR" &&"
-WINENV+="export APP_NAME="$APP_NAME" &&"
-WINENV+="export APP_MANIFEST=$APP_MANIFEST &&"
-WINENV+="export WINEPREFIX=$WINEPREFIX &&"
-WINENV+="export WINE=$WINE &&"
-WINENV+="export PROTON=$PROTON &&"
-WINENV+="export STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH &&"
-WINENV+="export STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_CLIENT_INSTALL_PATH &&"
-WINENV+="export PATH=$COMPAT_TOOL_PATH:$COMPAT_TOOL_PATH/files/bin:$PATH"
-# show env if no args left
-if [ -z "$1" ]; then
-   showenv "$WINENV" && exit
-fi
-# run
-cmd="$WINENV && $1"
-# echo cmd="$cmd"
-bash -c "$cmd" 
