@@ -79,17 +79,37 @@ function maybe_app_id (){
     fi
     echo $APPID
 }
-# usage
-if [ -z "$1" ]; then
+#
+function showenv ()
+{
+    IFS='&&'
+    read -ra a1 <<<"$1"
+    for i in "${a1[@]}"; do
+        if [ ! -z "$i" ]; then
+            echo ${i/export /''}
+        fi
+    done    
+}
+function usage(){
     echo "${name}: v${version} ${url}"
     echo
     echo "'$desc'"
     echo
     echo "Usage: "
-    echo "\$ $name # with no arg, shows this"
-    echo "\$ $name <APPID>' # show env for <APPID>"
-    echo "\$ $name <APPID> <COMMAND>' # run <command> with <APPID>'s env"
-    echo "\$ $name <install|uninstall|update>' # Not implemented"
+    echo "\$ $name # with no args, shows this"
+    echo "\$ $name [APPID|APP_NAME]' # show env for APPID or APP_NAME"
+    echo "\$ $name [APPID|APP_NAME] [COMMAND]' # run COMMAND with <APPID or APP_NAME>'s env"
+    echo "\$ $name [APPID|APP_NAME] [COMMAND]' # run COMMAND with <APPID or APP_NAME>'s env"
+    echo "\$ $name manifest ' # show info for all installed apps, returns json format"
+    echo "\$ $name manifest [APPID|APP_NAME]' # show info for [APPID|APP_NAME], returns json format"
+    echo "\$ $name id [APP_NAME]' # search for appid for given name match, returns json format"
+    echo "\$ $name install' # install '$name' script into ~/.local/bin"
+    echo "\$ $name uninstall' # remove '$name' script into ~/.local/bin"
+    echo "\$ $name update' # update '$name' script"
+}
+# usage
+if [ -z "$1" ]; then
+    usage
     exit
 fi
 #
@@ -168,7 +188,7 @@ update-config)
     echo "$cfg_global"
     exit
     ;;
-appmanifest)
+manifest)
     appmanifest=$(get_appmanifests | jq -s)
     if [ -z "$2" ]; then
         echo $appmanifest    
@@ -178,7 +198,7 @@ appmanifest)
     fi
     exit
     ;;
-appid)
+id)
     echo $(get_app_id_by_name "$(get_appmanifests | jq -s)" $2)
     exit
     ;;
@@ -236,17 +256,6 @@ WINENV+="export PROTON=$PROTON &&"
 WINENV+="export STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH &&"
 WINENV+="export STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_CLIENT_INSTALL_PATH &&"
 WINENV+="export PATH=$COMPAT_TOOL_PATH:$COMPAT_TOOL_PATH/files/bin:$PATH"
-#
-function showenv ()
-{
-    IFS='&&'
-    read -ra a1 <<<"$1"
-    for i in "${a1[@]}"; do
-        if [ ! -z "$i" ]; then
-            echo ${i/export /''}
-        fi
-    done    
-}
 # show env if no args left
 if [ -z "$1" ]; then
    showenv "$WINENV" && exit
