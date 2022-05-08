@@ -161,7 +161,7 @@ function self_update ()
     # download new version
     local tmp=$(mktemp)
     curl $fetch >$tmp
-    new_version="$(get_version "$(grep "version=" $tmp)")"
+    local new_version="$(get_version "$(grep "version=" $tmp)")"
     if [ -z "$new_version" ]; then
         echo "error: can't udpate, see file: '$tmp' version ($new_version) is not valid or not foud"
         exit 1
@@ -172,8 +172,8 @@ function self_update ()
         echo "error: can't udpate, see file: '$tmp' version ($new_version) equals this ($SELF_VERSION)"        
         exit 1
     elif [[ "$new_version" > "$SELF_VERSION" ]]; then
-        bakd="$HOME/.local/share/$SELF_NAME"
-        bak="$bakd/$SELF_NAME.$SELF_VERSION.bak"
+        local bakd="$HOME/.local/share/$SELF_NAME"
+        local bak="$bakd/$SELF_NAME.$SELF_VERSION.bak"
         mkdir -p "$bakd" && cp "$SELF_PATH" "$bak" && cat "$tmp" >"$SELF_PATH" && error "Updated: see backup at $bak" 0 || error "error updating" 1
     fi
 }
