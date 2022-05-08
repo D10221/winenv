@@ -16,8 +16,6 @@ _name="$_dir/$name"
 url="https://github.com/D10221/$name"
 fetch="https://raw.githubusercontent.com/D10221/$name/main/$name"
 desc='Sets env vars and paths to help run an arbitrary command on steam wine/proton app prefixes'
-#
-APPID_REGEX='^[0-9]+$'
 # error
 function error {
 # colors
@@ -65,6 +63,21 @@ function get_app_id_by_name ()
 function get_appmanifest_by_id 
 {
     echo $1 |jq --argjson id $2 '.[]| select(.appid==$id)'
+}
+#
+# if $APPID is not a number, search app id by name
+function maybe_app_id (){
+    local APPID_REGEX='^[0-9]+$'
+    local APPID=$1
+    if ! [[ $APPID =~ $APPID_REGEX ]]; then
+        ID_SEARCH=$APPID 
+        error "'$APPID' is not an ID searching for app id by name like '$APPID'"
+        APPID=$(get_app_id_by_name "$appmanifest" "$ID_SEARCH") 
+        if ! [[ $APPID =~ $APPID_REGEX ]]; then    
+            error "Can't find app id for '$ID_SEARCH', search result '$APPID 'is not an app id." 1
+        fi    
+    fi
+    echo $APPID
 }
 # usage
 if [ -z "$1" ]; then
@@ -160,11 +173,7 @@ appmanifest)
     if [ -z "$2" ]; then
         echo $appmanifest    
     else
-        if [[ $2 =~ $APPID_REGEX ]]; then
-            APPID=$2
-        else            
-            APPID=$(get_app_id_by_name "$appmanifest" "$2")                 
-        fi                
+        APPID=$(maybe_app_id $2)
         echo $(get_appmanifest_by_id "$appmanifest" "$APPID")
     fi
     exit
@@ -177,16 +186,7 @@ esac
 # All Apps
 appmanifest=$(get_appmanifests | jq -s)
 #
-APPID=$1;shift
-# if $APPID is not a number, search app id by name
-if ! [[ $APPID =~ $APPID_REGEX ]]; then
-    ID_SEARCH=$APPID 
-    error "'$APPID' is not an ID searching for app id by name."
-    APPID=$(get_app_id_by_name "$appmanifest" "$ID_SEARCH") 
-    if ! [[ $APPID =~ $APPID_REGEX ]]; then    
-        error "Can't find app id for '$ID_SEARCH', search result '$APPID 'is not an app id." 1
-    fi    
-fi
+APPID=$(maybe_app_id $1);shift
 # App's manifest
 appmanifest_by_id=$(get_appmanifest_by_id "$appmanifest" "$APPID")
 #
