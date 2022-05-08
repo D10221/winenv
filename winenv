@@ -266,11 +266,11 @@ case "${1}" in
         exit
         ;;
     *)
-        # usage
+        # usage when no args
         if [ -z "$1" ]; then
             usage
             exit
-        fi
+        fi        
         main $@
         ;;
 esac
