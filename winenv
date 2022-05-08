@@ -19,9 +19,6 @@ SELF_DESC='Sets env vars and paths to help run an arbitrary command on steam win
 SELF_INSTALL_TARGET="$HOME/.local/bin/$SELF_NAME"
 # VARS
 STEAM_COMPAT_CLIENT_INSTALL_PATH=${STEAM_COMPAT_CLIENT_INSTALL_PATH:-$HOME/.local/share/Steam}
-if ! [ -d "$STEAM_COMPAT_CLIENT_INSTALL_PATH" ]; then
-error "STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_CLIENT_INSTALL_PATH is not a directory" 1
-fi
 # 
 # output $1 to stderr and exit if $2
 # 
@@ -77,8 +74,8 @@ function maybe_app_id (){
     local APPID=$1
     if ! [[ $APPID =~ $APPID_REGEX ]]; then
         ID_SEARCH=$APPID 
-        error "'$APPID' is not an ID searching for app id by name like '$APPID'"
-        APPID=$(get_app_id_by_name "$appmanifest" "$ID_SEARCH") 
+        error "'$APPID' is not an ID searching for app id by name like '$APPID'"        
+        APPID=$(get_app_id_by_name "$appmanifest" "$ID_SEARCH")         
         if ! [[ $APPID =~ $APPID_REGEX ]]; then    
             error "Can't find app id for '$ID_SEARCH', search result '$APPID 'is not an app id." 1
         fi    
@@ -103,9 +100,9 @@ function show_info (){
     local appmanifest=$(get_appmanifests | jq -s)
     if [ -z "$1" ]; then
         echo $appmanifest    
-    else
-        local APPID=$(maybe_app_id $1)
-        echo $(get_appmanifest_by_id "$appmanifest" "$APPID")
+    else        
+        local APPID
+        APPID=$(maybe_app_id $1) && echo $(get_appmanifest_by_id "$appmanifest" "$APPID")
     fi
 }
 function show_id ()
@@ -182,9 +179,10 @@ function main ()
     # All Apps
     local appmanifest=$(get_appmanifests | jq -s)
     #
-    local APPID=$(maybe_app_id $1);shift
+    local APPID
+    APPID=$(maybe_app_id $1) || exit 1
     # App's manifest
-    local appmanifest_by_id=$(get_appmanifest_by_id "$appmanifest" "$APPID")
+    local appmanifest_by_id=$(get_appmanifest_by_id "$appmanifest" "$APPID")    
     #
     local APP_MANIFEST=$( echo $appmanifest_by_id |jq '.appmanifest' |tr -d \")
     #
@@ -241,6 +239,10 @@ function main ()
     # echo cmd="$cmd"
     bash -c "$cmd" 
 }
+# Validate requirements
+if ! [ -d "$STEAM_COMPAT_CLIENT_INSTALL_PATH" ]; then
+error "STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_CLIENT_INSTALL_PATH is not a directory" 1
+fi
 # process args
 case "${1}" in
     install)
