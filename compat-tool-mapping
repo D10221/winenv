@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# explore: finding proton
+
+STEAM_COMPAT_CLIENT_INSTALL_PATH=${STEAM_COMPAT_CLIENT_INSTALL_PATH:-$HOME/.local/share/Steam}
+
+function compatToolMapping(){    
+    echo $(cat $STEAM_COMPAT_CLIENT_INSTALL_PATH/config/config.vdf |vdf2json|jq '.InstallConfigStore.Software.Valve.Steam.CompatToolMapping') |jq
+}
+# 
+if [ -z "$1" ]; then
+        compatToolMapping | jq 'to_entries|.[]|{appid:.key,value:.value.name}'
+    else
+    echo $(compatToolMapping |jq --arg key $1 'to_entries|.[]|select(.key==$key)|.value.name')|tr -d \"
+fi

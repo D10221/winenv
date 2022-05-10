@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+STEAM_COMPAT_CLIENT_INSTALL_PATH=${STEAM_COMPAT_CLIENT_INSTALL_PATH:-$HOME/.local/share/Steam}
+
+libraryfolders=$STEAM_COMPAT_CLIENT_INSTALL_PATH/config/libraryfolders.vdf
+
+if ! [ -f "$libraryfolders" ];then
+    echo "libraryfolders='$libraryfolders' is not a file">&2
+    exit 1
+fi
+
+read -d "\n" -ra _folders <<<"$(cat $libraryfolders | vdf2json|jq '.libraryfolders[].path? ' )"
+
+for libraryfolder in "${_folders[@]}"; do
+    libraryfolder=$(echo $libraryfolder|tr -d \") # remove quotes
+    echo $libraryfolder
+done
