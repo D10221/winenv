@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+#
+# get appmanifest by id
+# ex: './appmanifest 244210 | xargs cat | vdf2json |jq' # print appmanifest in json format
+#
 
 STEAM_COMPAT_CLIENT_INSTALL_PATH=${STEAM_COMPAT_CLIENT_INSTALL_PATH:-$HOME/.local/share/Steam}
 

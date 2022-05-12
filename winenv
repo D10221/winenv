@@ -188,6 +188,20 @@ function self_update ()
         mkdir -p "$bakd" && cp "$SELF_PATH" "$bak" && cat "$tmp" >"$SELF_PATH" && error "Updated: see backup at $bak" 0 || error "error updating" 1
     fi
 }
+#
+function config_info ()
+{
+   local appmanifest=$(get_appmanifests | jq -s) # usaed by maybe_app_id   
+   local APPID
+   local STEAM_COMPAT_DATA_PATH
+   local appmanifest_by_id
+   APPID=$(maybe_app_id $1) \
+   && appmanifest_by_id=$(get_appmanifest_by_id "$appmanifest" "$APPID") \
+   && STEAM_COMPAT_DATA_PATH=$(echo $appmanifest_by_id| jq --arg id $APPID '.libraryfolder+"/steamapps/compatdata/"+$id'|tr -d \") \
+   && cat "$STEAM_COMPAT_DATA_PATH/config_info" \
+   || error "No APPID" 1
+}
+#
 function main ()
 {
     # All Apps
@@ -295,6 +309,14 @@ case "$1" in
         || show_id $1
         exit
         ;;
+    config_info)
+        shift
+        (( $# < 1 )) \
+        && error "expected name or id" 1 \
+        || (( $# > 1 )) \
+        && error "Too many args" 1 \
+        || config_info $1
+    ;;
     *)
         # usage when no args
         if (( $# == 0 )) ; then

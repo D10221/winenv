@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+#
+# paths) list libraryfolders paths
+#
 
 STEAM_COMPAT_CLIENT_INSTALL_PATH=${STEAM_COMPAT_CLIENT_INSTALL_PATH:-$HOME/.local/share/Steam}
 
@@ -8,10 +11,28 @@ if ! [ -f "$libraryfolders" ];then
     echo "libraryfolders='$libraryfolders' is not a file">&2
     exit 1
 fi
-
-read -d "\n" -ra _folders <<<"$(cat $libraryfolders | vdf2json|jq '.libraryfolders[].path? ' )"
-
-for libraryfolder in "${_folders[@]}"; do
-    libraryfolder=$(echo $libraryfolder|tr -d \") # remove quotes
-    echo $libraryfolder
-done
+function paths ()
+{
+    read -d "\n" -ra _folders <<<"$(cat $libraryfolders | vdf2json|jq '.libraryfolders[].path? ' )"
+    for libraryfolder in "${_folders[@]}"; do
+        libraryfolder=$(echo $libraryfolder|tr -d \") # remove quotes
+        echo $libraryfolder
+    done
+}
+case "$1" in
+paths)
+    paths
+;;
+raw)
+    cat $libraryfolders
+;;
+json)
+    cat $libraryfolders | vdf2json |jq
+;;
+array)
+    cat $libraryfolders | vdf2json|jq '.libraryfolders|to_entries|map(.value.path?)'
+;;
+*)
+    paths
+;;
+esac

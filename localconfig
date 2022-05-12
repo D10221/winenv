@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+STEAM_COMPAT_CLIENT_INSTALL_PATH=${STEAM_COMPAT_CLIENT_INSTALL_PATH:-$HOME/.local/share/Steam}
+
+# TODO: 
+USERID="$1"
+
+cat $STEAM_COMPAT_CLIENT_INSTALL_PATH/userdata/$USERID/config/localconfig.vdf | vdf2json
