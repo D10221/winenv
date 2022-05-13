@@ -118,3 +118,9 @@ winenv 244210 'wine winepath c:\'
  ```bash
  ./winenv 244210 'which proton' # which proton I'm running
  ```
+
+ ### Resources
+ https://developer.valvesoftware.com/wiki/KeyValues
+ https://pypi.org/project/vdf3/
+ https://github.com/Corecii/steam-binary-vdf-ts/blob/master/src/BinaryVdf.ts
+ 
