@@ -2,7 +2,11 @@
 
 Sets env vars and paths to help run an arbitrary command on steam wine/proton app prefixes
 
-# usage  
+## status
+Works with GE-Proton, it breaks with 'Proton' and multiple library filders
+
+## usage  TODO:
+
 Show usage
 ```
 winenv # with no arguments
@@ -25,21 +29,10 @@ winenv update    # replace it self with new version
 ```
 
 # Config
-Defaults to 
-```
-# steam
-STEAM_HOME=HOME/.local/share/Steam
-STEAM_APPS=$STEAM_HOME/steamapps
-STEAM_APPS_COMMON=$STEAM_APPS/common
-# steam compat
-STEAM_COMPAT_CLIENT_INSTALL_PATH=STEAM_HOME
-STEAM_COMPATTOOLS=$STEAM_HOME/compatibilitytools.d
-```
-Reads from:  
-```$PWD\.winenv```  
-```$HOME\.config\winenv\.winenv```  
-In That order
 
+```
+export STEAM_COMPAT_CLIENT_INSTALL_PATH=STEAM_HOME
+```
 
  ### ...
 
