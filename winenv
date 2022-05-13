@@ -114,18 +114,107 @@ function show_info (){
         APPID=$(maybe_app_id $1) && echo $(get_appmanifest_by_id "$appmanifest" "$APPID")
     fi
 }
+#
 function show_id ()
 {
     if [ -z "$1" ];then 
          error "name required" 1
     fi
-    local APPID=''
-    APPID=$(get_app_id_by_name "$(get_appmanifests | jq -s)" $1)
-    if [ -z "$APPID" ]; then
-        error "Not found" 1    
-    fi
-    echo $APPID
+    local APPID=''tool
 }
+#
+# arg: $1 = app name or id
+#
+function compatdata()
+{
+   local appmanifest=$(get_appmanifests | jq -s) # used by maybe_app_id   
+   local APPID
+   local STEAM_COMPAT_DATA_PATH
+   local appmanifest_by_id
+   APPID=$(maybe_app_id $1) \
+   && appmanifest_by_id=$(get_appmanifest_by_id "$appmanifest" "$APPID") \
+   && echo $(echo $appmanifest_by_id| jq --arg id $APPID '.libraryfolder+"/steamapps/compatdata/"+$id'|tr -d \")   
+}
+#
+# Get compat tool version by id
+# arg: $1 = app name or id
+#
+function compat-tool-version ()
+{
+    #  Compat tool Version
+    local STEAM_COMPAT_DATA_PATH=$(compatdata $1)
+    local COMPAT_TOOL_VERSION=$(cat $STEAM_COMPAT_DATA_PATH/version)
+    [ -z "$COMPAT_TOOL_VERSION" ] &&
+    error "Can't find COMPAT_TOOL_VERSION for APPID=$APPID with STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH" 1 \
+    || echo $COMPAT_TOOL_VERSION
+}
+#
+# arg: $1 = app name or id
+# finding proton
+#  if version in '/compatibilitytools.d'
+#  or in same $libraryfolder
+#  or in $STEAM_COMPAT_CLIENT_INSTALL_PATH/steamapps/common/Proton*?
+#
+function compat-tool-path ()
+{
+    local COMPAT_TOOL_VERSION=$(compat-tool-version $1)
+    # custom compat tool like GE-Proton
+    local compatibilitytools="$STEAM_COMPAT_CLIENT_INSTALL_PATH/compatibilitytools.d"
+    local COMPAT_TOOL_PATH="$compatibilitytools/$COMPAT_TOOL_VERSION" &&
+    if [ ! -z "$COMPAT_TOOL_VERSION" ] &&  [ -d "$COMPAT_TOOL_PATH" ]; then
+        echo $COMPAT_TOOL_PATH
+        exit # done
+    else
+        error "version='$COMPAT_TOOL_VERSION' not in '$compatibilitytools'"
+    fi
+    local appmanifest=$(get_appmanifests | jq -s)   
+    local APPID=$(maybe_app_id $1) 
+    appmanifest_by_id=$(get_appmanifest_by_id "$appmanifest" "$APPID")
+    # 
+    local libraryfolder=$(echo $appmanifest_by_id| jq '.libraryfolder' | tr -d \")        
+    protons=$(find $libraryfolder/steamapps/common/* -type f -executable -name proton)    
+    function find-proton ()
+    {
+        local libraryfolder=$1
+        while IFS= read -r line
+        do
+            if [ "Python script, ASCII text executable"  == "$(file -b "$line")" ]; then 
+                v=$(grep -Po '^(\s+)?CURRENT_PREFIX_VERSION=\K\"(.*)\"' "$line" | tr -d \")
+                if [ ! -z "$v" ] && [ "$v" == "$COMPAT_TOOL_VERSION" ]; then
+                    echo $line
+                fi
+            fi
+        done <<<"$(find $libraryfolder/steamapps/common/* -type f -executable -name proton)"
+    }
+    proton=$(find-proton $libraryfolder)
+    if [ ! -z "$proton" ]; then
+        echo $proton
+        exit # done
+    fi
+    # search in STEAM_COMPAT_CLIENT_INSTALL_PATH (default location) ?
+    libraryfolder=$STEAM_COMPAT_CLIENT_INSTALL_PATH
+    proton=$(find-proton $libraryfolder)
+    if [ ! -z "$proton" ]; then
+        echo $proton
+        exit # done
+    fi
+    # Not found
+    error "version='$COMPAT_TOOL_VERSION' not in '$libraryfolder/steamapps/common'"  1
+}
+#
+function config-info ()
+{
+   local appmanifest=$(get_appmanifests | jq -s) # used by maybe_app_id   
+   local APPID
+   local STEAM_COMPAT_DATA_PATH
+   local appmanifest_by_id
+   APPID=$(maybe_app_id $1) \
+   && appmanifest_by_id=$(get_appmanifest_by_id "$appmanifest" "$APPID") \
+   && STEAM_COMPAT_DATA_PATH=$(echo $appmanifest_by_id| jq --arg id $APPID '.libraryfolder+"/steamapps/compatdata/"+$id'|tr -d \") \
+   && cat "$STEAM_COMPAT_DATA_PATH/config_info" \
+   || error "No APPID" 1
+}
+#
 function usage(){
     echo "$SELF_NAME: v$SELF_VERSION $SELF_URL"
     echo
@@ -187,19 +276,6 @@ function self_update ()
         local bak="$bakd/$SELF_NAME.$SELF_VERSION.bak"
         mkdir -p "$bakd" && cp "$SELF_PATH" "$bak" && cat "$tmp" >"$SELF_PATH" && error "Updated: see backup at $bak" 0 || error "error updating" 1
     fi
-}
-#
-function config_info ()
-{
-   local appmanifest=$(get_appmanifests | jq -s) # usaed by maybe_app_id   
-   local APPID
-   local STEAM_COMPAT_DATA_PATH
-   local appmanifest_by_id
-   APPID=$(maybe_app_id $1) \
-   && appmanifest_by_id=$(get_appmanifest_by_id "$appmanifest" "$APPID") \
-   && STEAM_COMPAT_DATA_PATH=$(echo $appmanifest_by_id| jq --arg id $APPID '.libraryfolder+"/steamapps/compatdata/"+$id'|tr -d \") \
-   && cat "$STEAM_COMPAT_DATA_PATH/config_info" \
-   || error "No APPID" 1
 }
 #
 function main ()
@@ -309,14 +385,38 @@ case "$1" in
         || show_id $1
         exit
         ;;
-    config_info)
+    config-info)
         shift
         (( $# < 1 )) \
         && error "expected name or id" 1 \
         || (( $# > 1 )) \
         && error "Too many args" 1 \
-        || config_info $1
+        || config-info $1
     ;;
+    compatdata)
+        shift
+        (( $# < 1 )) \
+        && error "expected name or id" 1 \
+        || (( $# > 1 )) \
+        && error "Too many args" 1 \
+        || compatdata $1
+    ;;
+    compat-tool-version)
+        shift
+        (( $# < 1 )) \
+        && error "expected name or id" 1 \
+        || (( $# > 1 )) \
+        && error "Too many args" 1 \
+        || compat-tool-version $1
+    ;;
+    compat-tool-path)
+        shift
+        (( $# < 1 )) \
+        && error "expected name or id" 1 \
+        || (( $# > 1 )) \
+        && error "Too many args" 1 \
+        || compat-tool-path $1
+    ;;     
     *)
         # usage when no args
         if (( $# == 0 )) ; then
