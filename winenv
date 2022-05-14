@@ -165,12 +165,42 @@ function findProton ()
     done <<<"$(find $libraryfolder/steamapps/common/* -type f -executable -name proton)"
 }
 #
-# 
+# find toolmanifests
 #
-function listProtons (){
+function toolmanifest(){
     read -d "\n" -ra libraryfolders<<<"$(getLibraryfolderPaths)"
     for libraryfolder in "${libraryfolders[@]}"; do
-        find $libraryfolder/steamapps/common/* -type f -executable -name proton
+        find $libraryfolder/* -type f -name toolmanifest.vdf 
+    done
+}
+#
+# ...
+#
+function get_wines (){
+    read -d "\n" -ra libraryfolders<<<"$(getLibraryfolderPaths)"
+    for libraryfolder in "${libraryfolders[@]}"; do
+        while IFS='\n' read -r line
+        do
+            local dir=$(dirname "$line")            
+            local proton=$(find "$dir" -executable -type f -name wine) \
+            && [ -x "$proton" ] \
+            && echo $proton
+        done <<<"$(find $libraryfolder/* -type f -name toolmanifest.vdf -printf '%p\n')"
+    done
+}
+#
+# ...
+#
+function get_protons (){
+    read -d "\n" -ra libraryfolders<<<"$(getLibraryfolderPaths)"
+    for libraryfolder in "${libraryfolders[@]}"; do
+        while IFS='\n' read -r line
+        do
+            local dir=$(dirname "$line")            
+            local proton=$(find "$dir" -executable -type f -name proton) \
+            && [ -x "$proton" ] \
+            && echo $proton
+        done <<<"$(find $libraryfolder/* -type f -name toolmanifest.vdf -printf '%p\n')"
     done
 }
 #
@@ -180,7 +210,7 @@ function listProtons (){
 #  or in same $libraryfolder
 #  or in $STEAM_COMPAT_CLIENT_INSTALL_PATH/steamapps/common/Proton*?
 #
-function compatToolPath ()
+function get_compatibilitytool ()
 {
     local COMPAT_TOOL_VERSION=$(compatToolVersion $1)
     # custom compat tool like GE-Proton
@@ -330,6 +360,13 @@ function getLocalConfig (){
     # find $STEAM_COMPAT_CLIENT_INSTALL_PATH/userdata -name localconfig.vdf
 }
 #
+# show shortcuts.vdf
+#
+function shortcuts ()
+{
+    vdfbin2json $(find $STEAM_COMPAT_CLIENT_INSTALL_PATH/userdata/* -type f -name shortcuts.vdf)
+}
+#
 function main ()
 {
     # All Apps
@@ -370,22 +407,27 @@ function main ()
     if [ ! -f "$PROTON" ]; then
         error "PROTON='$PROTON' is not a file" 1
     fi
+    # TODO: try to accomodate Proton and GE-Proton
+    COMPAT_TOOL_PATH_BIN="$COMPAT_TOOL_PATH:$COMPAT_TOOL_PATH/bin:$COMPAT_TOOL_PATH/files/bin:"
     # wine
     local WINE=$COMPAT_TOOL_PATH/files/bin/wine # GE-Proton
     if [ ! -f "$WINE" ]; then
         error "WINE='$WINE' is not a file" 1
     fi
-    # exports
-    WINENVx="export APPID=$APPID &&"
+    # exports essentials
+    WINENV=''
+    WINENV+="export STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH &&"
+    WINENV+="export STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_CLIENT_INSTALL_PATH &&"  
+    WINENV+="export PATH=$COMPAT_TOOL_PATH_BIN:$PATH"
+    # exports extra
+    WINENV+="export WINE=$WINE &&"
+    WINENV+="export PROTON=$PROTON &&"
+    # exports more
+    WINENV+="export APPID=$APPID &&"
     WINENV+="export APP_DIR="$APP_DIR" &&"
     WINENV+="export APP_NAME="$APP_NAME" &&"
     WINENV+="export APP_MANIFEST=$APP_MANIFEST &&"
     WINENV+="export WINEPREFIX=$WINEPREFIX &&"
-    WINENV+="export WINE=$WINE &&"
-    WINENV+="export PROTON=$PROTON &&"
-    WINENV+="export STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH &&"
-    WINENV+="export STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_CLIENT_INSTALL_PATH &&"
-    WINENV+="export PATH=$COMPAT_TOOL_PATH:$COMPAT_TOOL_PATH/files/bin:$PATH"
     # show env if no args left
     if [ -z "$2" ]; then
         showenv "$WINENV" 
@@ -464,13 +506,13 @@ case "$1" in
         || compatToolVersion $1
         exit
     ;;
-    compat-tool-path)
+    compatibilitytools)
         shift
         (( $# < 1 )) \
         && error "expected name or id" 1 \
         || (( $# > 1 )) \
         && error "Too many args" 1 \
-        || compatToolPath $1
+        || get_compatibilitytool $1
         exit
     ;;
     appmanifest)
@@ -487,12 +529,24 @@ case "$1" in
         || getLibraryfolderPaths
         exit
     ;;
-    proton-list)
-        listProtons
+    protons)
+        get_protons
         exit
     ;;
+    wines)
+        get_wines
+        exit
+    ;;    
     localconfig)
         getLocalConfig $1
+        exit
+    ;;
+    shortcuts)
+        shortcuts
+        exit
+    ;;
+    toolmanifest)
+        toolmanifest
         exit
     ;;
     *)

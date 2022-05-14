@@ -114,6 +114,7 @@ winenv 244210 'wine winepath c:\'
 
  ### Resources
  https://developer.valvesoftware.com/wiki/KeyValues
+ https://pypi.org/project/vdf/
  https://pypi.org/project/vdf3/
  https://github.com/Corecii/steam-binary-vdf-ts/blob/master/src/BinaryVdf.ts
- 
+ https://gitlab.steamos.cloud/steamrt/steam-runtime-tools/-/blob/master/docs/steam-compat-tool-interface.md
