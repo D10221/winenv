@@ -115,15 +115,18 @@ function show_info (){
     fi
 }
 #
+# show ids for matching name
+# Args: 
+#   $1 "app name to match"
+#
 function show_id ()
-{
-    if [ -z "$1" ];then 
-         error "name required" 1
-    fi
-    local APPID=''tool
+{    
+    local appmanifest=$(get_appmanifests | jq -s) # used by maybe_app_id   
+    echo $appmanifest | jq --arg N "$1" '.[]|select(.name|test($N;"i"))|.appid'                
 }
 #
-# arg: $1 = app name or id
+# Args: 
+#   $1 "app name or id" 
 #
 function compatdata()
 {
@@ -182,9 +185,9 @@ function get_wines (){
         while IFS='\n' read -r line
         do
             local dir=$(dirname "$line")            
-            local proton=$(find "$dir" -executable -type f -name wine) \
-            && [ -x "$proton" ] \
-            && echo $proton
+            local wine=$(find "$dir" -executable -type f -name wine) \
+            && [ -x "$wine" ] \
+            && echo $wine
         done <<<"$(find $libraryfolder/* -type f -name toolmanifest.vdf -printf '%p\n')"
     done
 }
@@ -201,6 +204,34 @@ function get_protons (){
             && [ -x "$proton" ] \
             && echo $proton
         done <<<"$(find $libraryfolder/* -type f -name toolmanifest.vdf -printf '%p\n')"
+    done
+}
+#
+# get paths to proton and wine for libraryfolder
+# Args:
+#   $1 as 'libraryfolder' 
+#
+function get_libraryfolder_bin_path (){
+    local libraryfolder=$1
+    while IFS='\n' read -r line
+    do
+        local dir=$(dirname "$line")            
+        local proton=$(find -L "$dir" -mindepth 1 -maxdepth 2 -executable -type f -name proton) \
+        && local wine=$(find "$dir" -executable -type f -name wine) \
+        && [ -x "$wine" ] \
+        && [ -x "$proton" ] \
+        && local proton_dir="$(dirname "$proton")" \
+        && echo $proton_dir \
+        && echo "$(dirname "$wine")"
+    done <<<"$(find $libraryfolder/* -type f -name toolmanifest.vdf -printf '%p\n')"
+}
+#
+# get all paths to proton and wine
+#
+function get_bin_path (){
+    read -d "\n" -ra libraryfolders<<<"$(getLibraryfolderPaths)"
+    for libraryfolder in "${libraryfolders[@]}"; do
+        get_libraryfolder_bin_path $libraryfolder
     done
 }
 #
@@ -298,15 +329,16 @@ function usage(){
     echo
     echo "Usage: "
     echo " $SELF_NAME # with no args, shows this"
-    echo " $SELF_NAME [APPID|APP_NAME]' # show env for APPID or APP_NAME"
-    echo " $SELF_NAME [APPID|APP_NAME] [COMMAND]' # run COMMAND with <APPID or APP_NAME>'s env"
-    echo " $SELF_NAME [APPID|APP_NAME] [COMMAND]' # run COMMAND with <APPID or APP_NAME>'s env"
-    echo " $SELF_NAME info ' # show info for all installed apps, returns json format"
-    echo " $SELF_NAME info [APPID|APP_NAME]' # show info for [APPID|APP_NAME], returns json format"
-    echo " $SELF_NAME id [APP_NAME]' # search for appid for given name match, returns json format"
-    echo " $SELF_NAME install' # install '$SELF_NAME' script into ~/.local/bin"
-    echo " $SELF_NAME uninstall' # remove '$SELF_NAME' script into ~/.local/bin"
-    echo " $SELF_NAME update' # update '$SELF_NAME' script"
+    echo " $SELF_NAME '[APPID|APP_NAME]' # show env for APPID or APP_NAME"
+    echo " $SELF_NAME '[APPID|APP_NAME]' '[COMMAND]' # run COMMAND with <APPID or APP_NAME> env"
+    echo " $SELF_NAME run '[APPID|APP_NAME]' '[COMMAND]' # run COMMAND with <APPID or APP_NAME> env"
+    echo " $SELF_NAME env '[APPID|APP_NAME]'' # show env for APPID or APP_NAME"
+    echo " $SELF_NAME info # show info for all installed apps, returns json format"
+    echo " $SELF_NAME info '[APPID|APP_NAME]' # show info for [APPID|APP_NAME], returns json format"
+    echo " $SELF_NAME id '[APP_NAME]' # search for appid for given name match, returns json format"
+    echo " $SELF_NAME 'install' # install '$SELF_NAME' script into ~/.local/bin"
+    echo " $SELF_NAME 'uninstall' # remove '$SELF_NAME' script into ~/.local/bin"
+    echo " $SELF_NAME 'update' # update '$SELF_NAME' script"
     echo "Config:"
     echo " \$STEAM_COMPAT_CLIENT_INSTALL_PATH # defaults to '~/.local/share/Steam'"
 }
@@ -367,9 +399,13 @@ function shortcuts ()
     vdfbin2json $(find $STEAM_COMPAT_CLIENT_INSTALL_PATH/userdata/* -type f -name shortcuts.vdf)
 }
 #
-function main ()
+# buyld env 
+# Args:
+#   $1 "APPID or app name"
+#
+function winenv()
 {
-    # All Apps
+     # All Apps
     local appmanifest=$(get_appmanifests | jq -s)
     #
     local APPID
@@ -416,9 +452,10 @@ function main ()
     fi
     # exports essentials
     WINENV=''
-    WINENV+="export STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH &&"
     WINENV+="export STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_CLIENT_INSTALL_PATH &&"  
+    WINENV+="export STEAM_COMPAT_DATA_PATH=$STEAM_COMPAT_DATA_PATH &&"
     WINENV+="export PATH=$COMPAT_TOOL_PATH_BIN:$PATH"
+    WINENV+="export WINEPREFIX=$WINEPREFIX &&"
     # exports extra
     WINENV+="export WINE=$WINE &&"
     WINENV+="export PROTON=$PROTON &&"
@@ -427,16 +464,7 @@ function main ()
     WINENV+="export APP_DIR="$APP_DIR" &&"
     WINENV+="export APP_NAME="$APP_NAME" &&"
     WINENV+="export APP_MANIFEST=$APP_MANIFEST &&"
-    WINENV+="export WINEPREFIX=$WINEPREFIX &&"
-    # show env if no args left
-    if [ -z "$2" ]; then
-        showenv "$WINENV" 
-    else 
-        # run
-        cmd="$WINENV && $2"
-        # echo cmd="$cmd"
-        bash -c "$cmd"
-    fi    
+    echo $WINENV
 }
 # Validate requirements
 if ! [ -d "$STEAM_COMPAT_CLIENT_INSTALL_PATH" ]; then
@@ -476,7 +504,7 @@ case "$1" in
         shift
         (( $# > 1 )) \
         && error "Too many args" 1 \
-        || show_id $1
+        || show_id "$1"
         exit
     ;;
     config-info)
@@ -536,7 +564,11 @@ case "$1" in
     wines)
         get_wines
         exit
-    ;;    
+    ;;
+    bin)
+        get_bin_path
+        exit
+    ;;   
     localconfig)
         getLocalConfig $1
         exit
@@ -549,6 +581,18 @@ case "$1" in
         toolmanifest
         exit
     ;;
+    env)
+        shift
+        showenv "$(winenv $1)"
+    ;;
+    run)
+        shift
+        WINENV=$(winenv "$1")
+        # run
+        cmd="$WINENV $2"
+        # echo cmd="$cmd"
+        bash -c "$cmd"
+    ;;
     *)
         # usage when no args
         if (( $# == 0 )) ; then
@@ -557,7 +601,15 @@ case "$1" in
         if (( $# > 2 )) ; then
             error "Too many args" 1
         fi
-        main "$1" "$2"
+        if [ -z "$2" ];then
+            showenv "$(winenv $1)"
+        else
+            WINENV=$(winenv "$1")
+            # run
+            cmd="$WINENV $2"
+            # echo cmd="$cmd"
+            bash -c "$cmd"     
+        fi
         exit
         ;;
 esac
