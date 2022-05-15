@@ -33,11 +33,7 @@ Config:
 export STEAM_COMPAT_CLIENT_INSTALL_PATH=STEAM_HOME
 ```
 `STEAM_COMPAT_CLIENT_INSTALL_PATH` defaults to `~/.local/share/Steam`
-
- ### ...
-
- https://wiki.winehq.org/List_of_Commands
-
+ 
 ## Dependencies
 
 - bash
@@ -119,6 +115,7 @@ winenv 244210 'wine winepath c:\'
 
  ## Resources & credits
  https://www.winehq.org/  
+ https://wiki.winehq.org/List_of_Commands  
  https://github.com/frostworx/steamtinkerlaunch  
  https://github.com/Matoking/protontricks  
  https://github.com/Winetricks/winetricks  
