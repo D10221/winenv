@@ -139,10 +139,11 @@ function compatdata()
    && echo $(echo $appmanifest_by_id| jq --arg id $APPID '.libraryfolder+"/steamapps/compatdata/"+$id'|tr -d \")   
 }
 #
-# Get compat tool version by id
-# arg: $1 = app name or id
+# Get compat tool version by appid
+# Args: 
+#   $1 "app name or id"
 #
-function compatToolVersion ()
+function get_compatdata_tool_version ()
 {
     #  Compat tool Version
     local STEAM_COMPAT_DATA_PATH=$(compatdata $1)
@@ -171,7 +172,7 @@ function findProton ()
 # find toolmanifests
 #
 function toolmanifest(){
-    read -d "\n" -ra libraryfolders<<<"$(getLibraryfolderPaths)"
+    read -d "\n" -ra libraryfolders<<<"$(get_libraryfolders_path)"
     for libraryfolder in "${libraryfolders[@]}"; do
         find $libraryfolder/* -type f -name toolmanifest.vdf 
     done
@@ -180,7 +181,7 @@ function toolmanifest(){
 # ...
 #
 function get_wines (){
-    read -d "\n" -ra libraryfolders<<<"$(getLibraryfolderPaths)"
+    read -d "\n" -ra libraryfolders<<<"$(get_libraryfolders_path)"
     for libraryfolder in "${libraryfolders[@]}"; do
         while IFS='\n' read -r line
         do
@@ -195,7 +196,7 @@ function get_wines (){
 # ...
 #
 function get_protons (){
-    read -d "\n" -ra libraryfolders<<<"$(getLibraryfolderPaths)"
+    read -d "\n" -ra libraryfolders<<<"$(get_libraryfolders_path)"
     for libraryfolder in "${libraryfolders[@]}"; do
         while IFS='\n' read -r line
         do
@@ -208,6 +209,7 @@ function get_protons (){
 }
 #
 # get paths to proton and wine for libraryfolder
+# from toolmanifest.vdf
 # Args:
 #   $1 as 'libraryfolder' 
 #
@@ -226,24 +228,69 @@ function get_libraryfolder_bin_path (){
     done <<<"$(find $libraryfolder/* -type f -name toolmanifest.vdf -printf '%p\n')"
 }
 #
-# get all paths to proton and wine
+# get paths to proton and wine for libraryfolder
+# from toolmanifest.vdf
+# Args:
+#   $1 as 'libraryfolder' 
+#   $2 as 'COMPAT_TOOL_VERSION'
+#
+function get_libraryfolder_bin_path_for_compatdata_version (){
+
+    local libraryfolder=$1
+    local COMPAT_TOOL_VERSION=$2
+
+    while IFS='\n' read -r line
+    do
+        local dir=$(dirname "$line")
+        if [ -d "$dir" ]; then
+            b="$(basename "$dir")"
+            echo basename=$b,version=$COMPAT_TOOL_VERSION
+            if [ "$COMPAT_TOOL_VERSION" ==  "$b" ]; then
+                local proton=$(find -L "$dir" -mindepth 1 -maxdepth 2 -executable -type f -name proton)
+                if [ -x "$proton" ];then
+                    local wine=$(find "$dir" -executable -type f -name wine)
+                    if [ -x "$wine" ]; then
+                        local proton_dir="$(dirname "$proton")"
+                        echo $proton_dir
+                        echo "$(dirname "$wine")"
+                        exit                         
+                    fi
+                fi
+            fi
+        fi
+    done <<<"$(find $libraryfolder/* -type f -name toolmanifest.vdf -printf '%p\n')"
+    exit 1
+}
+#
+# get paths to proton and wine
 #
 function get_bin_path (){
-    read -d "\n" -ra libraryfolders<<<"$(getLibraryfolderPaths)"
+    read -d "\n" -ra libraryfolders<<<"$(get_libraryfolders_path)"
     for libraryfolder in "${libraryfolders[@]}"; do
         get_libraryfolder_bin_path $libraryfolder
     done
 }
 #
-# arg: $1 = app name or id
-# finding proton
+# get paths to proton and wine
+# for compat data version
+#
+function get_bin_path_for_compatdata_version (){
+    read -d "\n" -ra libraryfolders<<<"$(get_libraryfolders_path)"
+    for libraryfolder in "${libraryfolders[@]}"; do
+        get_libraryfolder_bin_path_for_compatdata_version $libraryfolder "$1" && break
+    done
+}
+#
+# finding compatibilitytool
 #  if version in '/compatibilitytools.d'
 #  or in same $libraryfolder
 #  or in $STEAM_COMPAT_CLIENT_INSTALL_PATH/steamapps/common/Proton*?
+# Args: 
+#   $1 "app name or id"
 #
 function get_compatibilitytool ()
 {
-    local COMPAT_TOOL_VERSION=$(compatToolVersion $1)
+    local COMPAT_TOOL_VERSION=$(get_compatdata_tool_version $1)
     # custom compat tool like GE-Proton
     local compatibilitytools="$STEAM_COMPAT_CLIENT_INSTALL_PATH/compatibilitytools.d"
     local COMPAT_TOOL_PATH="$compatibilitytools/$COMPAT_TOOL_VERSION" &&
@@ -275,7 +322,7 @@ function get_compatibilitytool ()
     error "version='$COMPAT_TOOL_VERSION' not in '$libraryfolder/steamapps/common'"  1
 }
 #
-function getLibraryfolderPaths ()
+function get_libraryfolders_path ()
 {
     local libraryfolders=$STEAM_COMPAT_CLIENT_INSTALL_PATH/config/libraryfolders.vdf
     read -d "\n" -ra _folders <<<"$(cat $libraryfolders | vdf2json|jq '.libraryfolders[].path? ' )"
@@ -288,10 +335,10 @@ function getLibraryfolderPaths ()
 # ex: 'appmanifest 244210 # prints path/to/appmanifest
 # ex: 'appmanifest 244210 | xargs cat | vdf2json |jq' # print appmanifest in json format
 #
-function getAppmanifestPathByID ()
+function get_appmanifest_path_by_id ()
 {
     APPID=$(maybe_app_id $1)    
-    read -d "\n" -ra libraryfolders<<<"$(getLibraryfolderPaths)"
+    read -d "\n" -ra libraryfolders<<<"$(get_libraryfolders_path)"
     for libraryfolder in "${libraryfolders[@]}"; do                
         entries=$(ls $libraryfolder/steamapps/appmanifest_*.acf)
         read -d " "  -ra _entries <<<$entries
@@ -309,7 +356,7 @@ function getAppmanifestPathByID ()
     done
 }
 #
-function config-info ()
+function config_info ()
 {
    local appmanifest=$(get_appmanifests | jq -s) # used by maybe_app_id   
    local APPID
@@ -507,13 +554,13 @@ case "$1" in
         || show_id "$1"
         exit
     ;;
-    config-info)
+    config_info)
         shift
         (( $# < 1 )) \
         && error "expected name or id" 1 \
         || (( $# > 1 )) \
         && error "Too many args" 1 \
-        || config-info $1
+        || config_info $1
         exit
     ;;
     compatdata)
@@ -531,7 +578,7 @@ case "$1" in
         && error "expected name or id" 1 \
         || (( $# > 1 )) \
         && error "Too many args" 1 \
-        || compatToolVersion $1
+        || get_compatdata_tool_version $1
         exit
     ;;
     compatibilitytools)
@@ -547,14 +594,14 @@ case "$1" in
         shift
         (( $# > 1 )) \
         && error "Too many args" 1 \
-        || getAppmanifestPathByID $1
+        || get_appmanifest_path_by_id $1
         exit
     ;;
     libraryfolders)
         shift
         (( $# > 0 )) \
         && error "Too many args" 1 \
-        || getLibraryfolderPaths
+        || get_libraryfolders_path
         exit
     ;;
     protons)
@@ -566,7 +613,14 @@ case "$1" in
         exit
     ;;
     bin)
-        get_bin_path
+        shift        
+        if [ ! -z "$1" ];then
+            # ex: /winenv bin 'Proton - Experimental'
+            # TODO: not searching in 'ALL' libraryfolders ? 
+            get_bin_path_for_compatdata_version "$1"
+        else
+            get_bin_path
+        fi
         exit
     ;;   
     localconfig)
