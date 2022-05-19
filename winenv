@@ -244,7 +244,7 @@ function get_libraryfolder_bin_path_for_compatdata_version (){
         local dir=$(dirname "$line")
         if [ -d "$dir" ]; then
             b="$(basename "$dir")"
-            echo basename=$b,version=$COMPAT_TOOL_VERSION
+            echo "basename=$b,version=$COMPAT_TOOL_VERSION"
             if [ "$COMPAT_TOOL_VERSION" ==  "$b" ]; then
                 local proton=$(find -L "$dir" -mindepth 1 -maxdepth 2 -executable -type f -name proton)
                 if [ -x "$proton" ];then
@@ -277,6 +277,7 @@ function get_bin_path (){
 function get_bin_path_for_compatdata_version (){
     read -d "\n" -ra libraryfolders<<<"$(get_libraryfolders_path)"
     for libraryfolder in "${libraryfolders[@]}"; do
+        echo "libraryfolder=$libraryfolder"
         get_libraryfolder_bin_path_for_compatdata_version $libraryfolder "$1" && break
     done
 }
@@ -570,6 +571,15 @@ case "$1" in
         || (( $# > 1 )) \
         && error "Too many args" 1 \
         || compatdata $1
+        exit
+    ;;
+    compatdata-version)
+        shift
+        (( $# < 1 )) \
+        && error "expected name or id" 1 \
+        || (( $# > 1 )) \
+        && error "Too many args" 1 \
+        || cat "$(compatdata $1)/version"
         exit
     ;;
     compat-tool-version)
